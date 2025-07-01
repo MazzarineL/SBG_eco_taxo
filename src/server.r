@@ -1506,7 +1506,7 @@ output$downloadTablespecies <- downloadHandler(
     
     df <- bind_rows(neu_cult2023, neu_cult2024)
     
-    colnames(df) <- gsub(" ", "_", colnames(df))
+    colnames(df) <- gsub(".", "_", colnames(df))
     colnames(df) <- tolower(colnames(df))
     colnames(df) <- gsub("[éè]", "e", colnames(df))
     colnames(df) <- gsub("[^a-z0-9_]", "", iconv(colnames(df), "latin1", "ASCII", sub=""))
