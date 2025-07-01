@@ -42,21 +42,22 @@ server <- function(input, output, session) {
 
 world <- map_data("world")
 
-cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/cover_genus_garden_500.csv") )
-cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/cover_species_garden_500.csv") )
-whit_part1.1 <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/data_env_gift_part1.csv"), sep = ";")
-whit_part1.2 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/data_env_gift_part2.csv"), sep = ";")
-whit_part1.3 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/data_env_gift_part3.csv"), sep = ";")
-whit_part1.4 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/data_env_gift_part1.4.csv"), sep = ",")
-whit_part2 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/data_env_gift_part4.csv"), sep = ";")
-whit_part1.5 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/data_env_gift_geneve.csv"), sep = ",")
+cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_genus_garden.csv") )
+cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
+whit_part1.1 <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part1.csv"), sep = ";")
+whit_part1.2 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part2.csv"), sep = ";")
+whit_part1.3 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part3.csv"), sep = ";")
+whit_part1.4 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part1.4.csv"), sep = ",")
+whit_part2 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part4.csv"), sep = ";")
+whit_part1.5 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_geneve.csv"), sep = ",")
+whit_part1.6 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_champex.csv"), sep = ",")
 
-
-all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/all_species_taxonomy_full.csv"), sep = ",")
+all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/all_species_taxonomy_full.csv"), sep = ",")
 
 
 whit_part1.4 <- whit_part1.4 %>% dplyr::select(-biome)
 whit_part1.5 <- whit_part1.5 %>% dplyr::select(-biome)
+whit_part1.6 <- whit_part1.6 %>% dplyr::select(-biome)
 
 whit_part1 <- rbind(whit_part1.1, whit_part1.2,whit_part1.3,whit_part1.4,whit_part1.5)  
 
@@ -155,7 +156,7 @@ observeEvent(input$action, {
     
     # Initialize variables
     taxonomy_merge <- cover_genus_garden_full
-    input_code <- input$Garden
+    input_code <-input$Garden
     
     # Update progress
     incProgress(1/6, detail = "Processing garden codes...")
@@ -843,48 +844,7 @@ observeEvent(input$action, {
 
   list_of_family <- lapply(input_code, function(garden) filtered_data$family[filtered_data$garden == garden])
   names(list_of_family) <- input_code
-  
-  # Mapping des couleurs selon les codes de jardin
- # colors from palette
-color_values<- c(
-  "#E74C3C",  # Fribourg
-  "#9B59B6",  # Neuchâtel
-  "#3498DB",  # Lausanne
-  "#F39C12",  # Genève
-  "#8E44AD",  # Fribourg and Neuchâtel
-  "#D35400",  # Fribourg and Lausanne
-  "#E67E22",  # Fribourg, Lausanne, and Neuchâtel
-  "#2980B9",  # Fribourg and Genève
-  "#1ABC9C",  # Fribourg, Genève, and Lausanne
-  "#2C3E50",  # Fribourg, Genève, Lausanne, and Neuchâtel
-  "#C0392B",  # Fribourg, Genève, and Neuchâtel
-  "#FF5733",  # Genève and Lausanne
-  "#F1C40F",  # Genève, Lausanne, and Neuchâtel
-  "#16A085",  # Genève and Neuchâtel
-  "#A93226",  # Lausanne and Neuchâtel
-  "#BDC3C7"   # Not available (gris)
-)
-names(color_values) <- family_levels
-  
-  # Mapping des labels des jardins
-  replacement_mapping <- c(
-    "fr" = "Fribourg",
-    "ne" = "Neuchâtel",
-    "la" = "Lausanne",
-    "ge" = "Genève",
-    "fr_ne" = "Fribourg and Neuchâtel",
-    "fr_la" = "Fribourg and Lausanne",
-    "fr_la_ne" = "Fribourg, Lausanne, and Neuchâtel",
-    "fr_ge" = "Fribourg and Genève",
-    "fr_ge_la" = "Fribourg, Genève, and Lausanne",
-    "fr_ge_la_ne" = "Fribourg, Genève, Lausanne, and Neuchâtel",
-    "fr_ge_ne" = "Fribourg, Genève, and Neuchâtel",
-    "ge_la" = "Genève and Lausanne",
-    "ge_la_ne" = "Genève, Lausanne, and Neuchâtel",
-    "ge_ne" = "Genève and Neuchâtel",
-    "la_ne" = "Lausanne and Neuchâtel",
-    "NA" = "Not available"
-  )
+
   
   # Générer les labels pour les jardins sélectionnés
   labels <- replacement_mapping[input_code]
@@ -1433,7 +1393,6 @@ cover_species <- cover_species %>%
 
   # Étape 2 : Supprimer les doublons en gardant un seul exemplaire avec le compte des occurrences
   cover_species <- cover_species %>%
-   dplyr::select(-pres) %>%
    dplyr::distinct(species, garden, .keep_all = TRUE) %>%
    dplyr::left_join(cover_species_summary, by = c("species", "garden"))
 
@@ -1533,7 +1492,7 @@ output$downloadTablespecies <- downloadHandler(
     }
   })
   list_fr <- reactive({
-    read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/refs/heads/main/data/botanical_garden_list/list_fribourg.csv"), sep = ",") %>%
+    read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_fribourg.csv"), sep = ",") %>%
       select(ipen, secteur, idTaxon, matched_name) %>%
       mutate(idTaxon = sapply(strsplit(trimws(idTaxon), "\\s+"), function(x) paste(head(x, 2), collapse = " ")))
   })
