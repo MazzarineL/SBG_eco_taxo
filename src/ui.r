@@ -7,7 +7,7 @@ library(plotly)
 library(curl)
 library(leaflet)
 
-cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_app/main/data/cover_species_garden_500.csv"))
+cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/cover_species_garden.csv"))
 
 ui <- dashboardPage(
   dashboardHeader(
