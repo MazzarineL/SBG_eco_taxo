@@ -29,7 +29,7 @@ sidebarMenu(
   div(class = "filters-section",
       menuItem("Filters", tabName = "filters", icon = icon("sliders"), selected = TRUE),
       checkboxGroupInput(inputId = "Garden", label = "Select Garden",
-                         choices = c("Neuchâtel" = "ne", "Fribourg" = "fr", "Lausanne" = "la", "Geneva" = "ge")),
+                         choices = c("Neuchâtel" = "ne", "Fribourg" = "fr", "Lausanne" = "la", "Geneva" = "ge","Champex" = "ch")),
       actionButton(inputId = "action", label = "Go!", icon = icon("play"), style = "color: #fff; background-color: #222c32;")
   ),
   
