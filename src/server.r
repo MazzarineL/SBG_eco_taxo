@@ -1498,7 +1498,7 @@ output$downloadTablespecies <- downloadHandler(
   })
   
   list_neu <- reactive({
-    neu_cult2024 <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_neu_2024.csv"), sep = ";",encoding = "latin1") 
+    neu_cult2024 <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_neu_2024.csv"), sep = ";") 
     neu_cult2023 <-read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_neu_2023.csv"), sep = ";") 
     
     neu_cult2023$years <- 2023
@@ -1511,7 +1511,7 @@ output$downloadTablespecies <- downloadHandler(
     colnames(df) <- gsub("[éè]", "e", colnames(df))
     colnames(df) <- gsub("[^a-z0-9_]", "", iconv(colnames(df), "latin1", "ASCII", sub=""))
     
-    df$numero_de_specimen_cultive <- substr(df$numero_de_specimen_cultive, 1, 8)
+    df$numerodespecimencultive <- substr(df$numerodespecimencultive, 1, 8)
     
     df <- df %>%
       select(code_ipen, famille, genre, espece, groupe, sousgroupe, years) %>%
