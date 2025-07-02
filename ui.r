@@ -94,7 +94,7 @@ sidebarMenu(
     }
 
     .main-bg {
-      background-image: url("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/main/www/bg.jpg");
+      background-image: background-image: url("bg.jpg");
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center center;
@@ -152,7 +152,7 @@ tabItem(tabName = "filters",
     style = "
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-image: url('https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/main/www/bg.jpg');
+      background-image: url('bg.jpg');
       background-size: cover;
       background-position: center center;
       min-height: 600px;
@@ -375,11 +375,13 @@ tabItem(tabName = "bot_map",
       width = 12, status = "primary", solidHeader = TRUE,
       tabsetPanel(
         tabPanel("Fribourg", leafletOutput("leaflet_jbuf", height = "800px")),
-        tabPanel("Neuchâtel", leafletOutput("leaflet_jbn", height = "800px"))
+        tabPanel("Neuchâtel", leafletOutput("leaflet_jbn", height = "800px")),
+        tabPanel("Champex", leafletOutput("leaflet_jbc", height = "800px"))
       ),
       div(style = "text-align: right; margin-top: 10px;",
           downloadButton("download_map_jbuf", "Download jbuf Map", class = "btn btn-primary"),
-          downloadButton("download_map_jbn", "Download jbn Map", class = "btn btn-primary")
+          downloadButton("download_map_jbn", "Download jbn Map", class = "btn btn-primary"),
+          downloadButton("download_map_jbc", "Download jbc Map", class = "btn btn-primary")
       )
     )
   )
