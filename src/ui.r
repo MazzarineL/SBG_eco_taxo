@@ -92,33 +92,38 @@ sidebarMenu(
       border-color: #00a75a;
     }
   '))),
-  
+
   tabItems(
     tabItem(tabName = "filters",
-      fluidRow(
-        tags$div(style = "color: #000000; font-size: 30px; font-weight: bold; margin-top: 30px; text-align: center;",
-          "Welcome to the Botanical Garden Coverage Application."
-        ),
-        tags$div(style = "color: #000000; font-size: 30px; font-weight: bold; margin-top: 50px; text-align: center;",
-          "To get started, select one or more gardens."
-        ),
-        tags$div(style = "color: #000000; font-size: 30px; font-weight: bold; margin-top: 50px; text-align: center;",
-          "Launch the script by clicking the 'Go' button."
-        ),
-        tags$div(style = "color: #000000; font-size: 30px; font-weight: bold; margin-top: 50px; text-align: center;",
-          "Explore the various tabs to view your results. Some pages include multiple graphs, so feel free to scroll."
-        ),
-        tags$div(style = "color: #000000; font-size: 30px; font-weight: bold; margin-top: 50px; text-align: center;",
-          "If you find a bug or have suggestions to improve the app’s usability, or if you work at a botanical garden and want your data included, please contact me at ",
-          tags$a(
-            href = "mailto:mazzarine.laboureau@unine.ch", 
-            "mazzarine.laboureau@unine.ch",
-            style = "color: #3c8dbc; font-weight: bold;"
-          )
-        ),
-        tags$div(style = "color: #000000; font-size: 30px; font-weight: bold; margin-top: 50px; text-align: center;",
-          "All data and scripts are available on my ",
-          a(href = "https://github.com/MazzarineL/SBG_app", "GitHub page.")
+fluidRow(
+    tags$div(style = "
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 40px;
+        border-radius: 10px;
+        margin: 50px auto;
+        width: 90%;
+        max-width: 1000px;
+        text-align: center;
+      ",
+      tags$div(style = "font-size: 30px; font-weight: bold; margin-bottom: 20px;",
+        "Welcome to the Botanical Garden Coverage Application."
+      ),
+      tags$div(style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
+        "To get started, select one or more gardens."
+      ),
+      tags$div(style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
+        "Launch the script by clicking the 'Go' button."
+      ),
+      tags$div(style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
+        "Explore the various tabs to view your results. Some pages include multiple graphs, so feel free to scroll."
+      ),
+      tags$div(style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
+        "If you find a bug or have suggestions to improve the app’s usability, or if you work at a botanical garden and want your data included, please contact me at ",
+        tags$a(href = "mailto:mazzarine.laboureau@unine.ch", "mazzarine.laboureau@unine.ch", style = "color: #3c8dbc; font-weight: bold;")
+      ),
+      tags$div(style = "font-size: 24px; font-weight: bold;",
+        "All data and scripts are available on my ",
+        tags$a(href = "https://github.com/MazzarineL/SBG_app", "GitHub page.")
         )
       )
     ),
