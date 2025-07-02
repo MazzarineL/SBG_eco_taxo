@@ -37,6 +37,13 @@ library(stringi)
 library(stringr)
 library(ggspatial)
 
+clean_family <- function(fam_vec) {
+  fam_vec <- trimws(fam_vec) # enlève espaces autour
+  fam_vec <- gsub("\\?", "", fam_vec) # supprime les ?
+  fam_vec <- gsub("\\s+", " ", fam_vec) # supprime espaces multiples
+  fam_vec <- stringr::str_squish(fam_vec) # nettoyage extra
+  fam_vec
+}
 # Définir le serveur
 server <- function(input, output, session) {
 
@@ -45,13 +52,7 @@ world <- map_data("world")
 cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_genus_garden.csv") )
 cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
 
-clean_family <- function(fam_vec) {
-  fam_vec <- trimws(fam_vec) # enlève espaces autour
-  fam_vec <- gsub("\\?", "", fam_vec) # supprime les ?
-  fam_vec <- gsub("\\s+", " ", fam_vec) # supprime espaces multiples
-  fam_vec <- stringr::str_squish(fam_vec) # nettoyage extra
-  fam_vec
-}
+
 observe({
   cleaned_families <- sort(unique(clean_family(cover_species_garden_full$family)))
   
@@ -1455,7 +1456,14 @@ output$downloadTablespecies <- downloadHandler(
     df <- df[!duplicated(df$code_ipen), ]
     df
   })
-  colnames(df)
+  
+
+  list_ch <- reactive({
+    read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_champex.csv"), sep = ",") %>%
+      select(ipen, secteur, idTaxon, matched_name) %>%
+      mutate(idTaxon = sapply(strsplit(trimws(idTaxon), "\\s+"), function(x) paste(head(x, 2), collapse = " ")))
+  })
+
   # jbuf_merged
   jbuf_merged <- reactive({
     req(data())
@@ -1609,3 +1617,4 @@ advance_long <- advance_long %>%
   })
 
 }
+
