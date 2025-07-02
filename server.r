@@ -44,6 +44,25 @@ world <- map_data("world")
 
 cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_genus_garden.csv") )
 cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
+
+clean_family <- function(fam_vec) {
+  fam_vec <- trimws(fam_vec) # enlève espaces autour
+  fam_vec <- gsub("\\?", "", fam_vec) # supprime les ?
+  fam_vec <- gsub("\\s+", " ", fam_vec) # supprime espaces multiples
+  fam_vec <- stringr::str_squish(fam_vec) # nettoyage extra
+  fam_vec
+}
+observe({
+  cleaned_families <- sort(unique(clean_family(cover_species_garden_full$family)))
+  
+  updateSelectInput(
+    session,
+    inputId = "family",
+    choices = cleaned_families,
+    selected = cleaned_families[1]  # ou "" si tu veux rien sélectionner par défaut
+  )
+})
+
 whit_part1.1 <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part1.csv"), sep = ";")
 whit_part1.2 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part2.csv"), sep = ";")
 whit_part1.3 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part3.csv"), sep = ";")
@@ -53,7 +72,6 @@ whit_part1.5 <-  read.csv(curl::curl("https://raw.githubusercontent.com/Mazzarin
 whit_part1.6 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_champex.csv"), sep = ",")
 
 all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/all_species_taxonomy_full.csv"), sep = ",")
-
 
 whit_part1.4 <- whit_part1.4 %>% dplyr::select(-biome)
 whit_part1.5 <- whit_part1.5 %>% dplyr::select(-biome)
@@ -233,10 +251,10 @@ observeEvent(c(input$actionfamily, input$genus_select), {
     req(input$Garden != "")
     
     family_test <- input$family
-    output$onlygenus <- NULL
-    output$mytable <- NULL
-    output$FamilyPlot <- NULL
-    output$textgenus <- NULL
+ output$onlygenus <- renderDT({ NULL })
+output$mytable <- renderDT({ NULL })
+output$FamilyPlot <- renderPlot({ NULL })
+output$textgenus <- renderText({ NULL })
     genus_cover <- NULL
     genus_select <- input$genus_select
     input_code <- input$Garden
@@ -253,8 +271,7 @@ observeEvent(c(input$actionfamily, input$genus_select), {
     }
     
     if (!goto_split) {
-      # Continue with the rest of the script
-      
+
       # Étape de mise à jour de la progression
       incProgress(1/6, detail = "Preparing data...")
       
@@ -279,12 +296,20 @@ observeEvent(c(input$actionfamily, input$genus_select), {
         nrow()
       
       if (unique_genera_count == 1) {
-        output$onlygenus <- renderTable({
-          genus_line <- subset(cover_species_garden_full, family == family_test)
-           genus_line <- genus_line %>%
-            dplyr::select(species, genus, family, garden, pres)
-          genus_line
-        })
+        output$onlygenus <- DT::renderDT({
+  genus_line <- subset(cover_species_garden_full, family == input$family)
+  
+  genus_line <- genus_line %>%
+    dplyr::select(any_of(c("species", "genus", "family", "garden", "pres")))
+  
+  datatable(
+    genus_line,
+    options = list(pageLength = 10, scrollX = TRUE),
+    rownames = FALSE,
+    class = "stripe hover compact"
+  )
+})
+
         output$textgenus <- renderText({
           "Tree not available, there is only one genus in this family"
         })
@@ -302,9 +327,28 @@ observeEvent(c(input$actionfamily, input$genus_select), {
         
         incProgress(3/6, detail = "Generating phylogenetic tree...")
 
-        tree <- rotl::tol_induced_subtree(ott_ids = cover_genus_garden$uid)
-        tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tree$tip.label)
-        
+incProgress(3/6, detail = "Generating phylogenetic tree...")
+
+# Nettoyage et vérification des ott_ids
+valid_ott_ids <- unique(na.omit(cover_genus_garden$uid))
+
+if (length(valid_ott_ids) < 2) {
+  showNotification("Pas assez d'ott_ids valides pour générer un arbre phylogénétique.", type = "error")
+  output$FamilyPlot <- renderPlot({ NULL })  # Ne pas afficher de plot
+  output$mytable <- renderDT({ NULL })       # Ne pas afficher de table
+  return(NULL)                               # Arrêt ici
+}
+
+max_ids <- 1000  # limite mémoire (ajuster ou enlever si tu veux)
+if (length(valid_ott_ids) > max_ids) {
+  valid_ott_ids <- valid_ott_ids[1:max_ids]
+  showNotification(paste("Limitation à", max_ids, "ott_ids pour éviter problème mémoire."), type = "warning")
+}
+
+# Appel sécurisé à la fonction
+tree <- rotl::tol_induced_subtree(ott_ids = valid_ott_ids)
+tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tree$tip.label)
+
         p <- ggtree(tree) + geom_tiplab()
         
         df_rangement <- data.frame(genus = get_taxa_name(p))
@@ -436,20 +480,23 @@ observeEvent(c(input$actionfamily, input$genus_select), {
         # Split par pres pour la couleur dans le plot
         incProgress(4/6, detail = "Preparing the table...")
         
-        output$mytable <- gt::render_gt({
-          df_rangement_priority <- final_best_df %>% filter(pres == 3) %>% select(genus)
-          
-          length_to_pad <- (3 - length(df_rangement_priority$genus) %% 3) %% 3
-          padded_genus <- c(df_rangement_priority$genus, rep(NA, length_to_pad))
-          
-          matrix_genus <- matrix(padded_genus, ncol = 3, byrow = TRUE)
-          df_table <- as.data.frame(matrix_genus)
-          
-          gt(df_table) %>%
-            gt::tab_header(
-              title = md("Genus to select")
-            )
-        })
+        output$mytable <- DT::renderDT({
+  df_rangement_priority <- final_best_df %>% filter(pres == 3) %>% select(genus)
+  
+  length_to_pad <- (3 - length(df_rangement_priority$genus) %% 3) %% 3
+  padded_genus <- c(df_rangement_priority$genus, rep(NA, length_to_pad))
+  
+  matrix_genus <- matrix(padded_genus, ncol = 3, byrow = TRUE)
+  df_table <- as.data.frame(matrix_genus)
+  
+  datatable(
+    df_table,
+    options = list(pageLength = 10, scrollX = TRUE),
+    rownames = FALSE,
+    colnames = c("Genus 1", "Genus 2", "Genus 3"),
+    class = "stripe hover compact"
+  )
+})
         
         output$downloadTable <- downloadHandler(
           filename = function() {
