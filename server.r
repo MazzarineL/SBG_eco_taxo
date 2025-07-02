@@ -1563,5 +1563,4 @@ advance_long <- advance_long %>%
 
 }
 
-
 shinyApp(ui = ui, server = server)

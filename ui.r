@@ -94,7 +94,7 @@ sidebarMenu(
     }
 
     .main-bg {
-      background-image: url("https://upload.wikimedia.org/wikipedia/commons/8/86/Herbarium_specimens.jpg");
+      background-image: url("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/main/www/bg.jpg");
       background-size: cover;
       background-repeat: no-repeat;
       background-position: center center;
@@ -107,6 +107,38 @@ sidebarMenu(
       padding: 20px;
       border-radius: 10px;
     }
+
+    .content {
+     background-color: transparent; 
+     padding: 0;                    
+     margin: 0;
+    }
+
+
+
+ h1 {
+    margin-top: 10px; /* ou même 0px */
+    margin-bottom: 10px;
+  }
+
+     .tab-pane {
+  background-color: #ffffff;
+  padding: 10px;             /* un peu plus de padding si tu veux que le contenu "respire" */
+  min-height: 100vh;         /* assure que ça prend toute la hauteur visible */
+  width: 100% !important;    /* force la largeur à 100% */
+  margin: 0;
+}
+
+    .help-block {
+      background-color: #ffffff;
+      font-size: 15px;
+      color: #333;
+    }
+
+
+
+
+
 
   '))),
 
@@ -156,137 +188,165 @@ tabItem(tabName = "filters",
       ),
       tags$br(), tags$br(),
       "All data and scripts are available on my ",
-      tags$a(href = "https://github.com/MazzarineL/SBG_app", "GitHub page.")
+      tags$a(href = "https://github.com/MazzarineL/SBG_eco_taxo/tree/main", "GitHub page.")
     )
   )
 ),
 
     
-    tabItem(tabName = "garden_tree",
-      helpText(tags$strong("This section displays the Garden Tree plot.")),
-      fluidRow(
-        box(title = "Garden Tree", status = "primary", solidHeader = TRUE, width = 25,
-          plotOutput(outputId = "treePlot", height = "1500px"),
-          downloadButton("downloadFullPlot", "Download Garden Tree Plot", class = "btn btn-primary")
-        )
-      )
-    ),
-    
-    tabItem(tabName = "family_tree",
-      helpText(tags$strong("This section presents the Family Tree plot...")),
-      fluidRow(
-        box(title = "Family Selection", status = "primary", solidHeader = TRUE, width = 12,
-          selectInput("family", "Family to Test", choices = sort(unique(cover_species_garden_full$family)), selected = ""),
-          sliderInput("genus_select", "Number of genera to select", min = 1, max = 30, value = 5),
-          actionButton("actionfamily", "Apply Family Filter", icon = icon("play"), style = "color: #fff; background-color: #222c32;"),
-          textOutput("textgenus"),
-          tableOutput("onlygenus"),
-          plotOutput("FamilyPlot", height = "800px"),
-          tableOutput("mytable"),
-          downloadButton("downloadFamilyPlot", "Download Family Tree Plot", class = "btn btn-primary"),
-          downloadButton("downloadTable", "Download Priority Table", class = "btn btn-primary")
-        )
-      )
-    ),
-    
-    tabItem(tabName = "plot_cover",
-      fluidRow(
-        box(title = "Coverage plot", status = "primary", solidHeader = TRUE, width = 12,
-          plotOutput("coverplot", height = "1000px"),
-          downloadButton("downloadcoverplot", "Download Coverage Plot", class = "btn btn-primary")
-        )
-      ),
-      fluidRow(
-        box(title = "Venn plot", status = "primary", solidHeader = TRUE, width = 15,
-          plotOutput("vennplot", height = "1200px"),
-          downloadButton("dlvenplot", "Download Venn Plot", class = "btn btn-primary")
-        )
-      )
-    ),
-    
-    tabItem(tabName = "whit_garden_plot",
-      fluidRow(
-        box(title = "Whittaker Garden Plot", status = "primary", solidHeader = TRUE, width = 12,
-          plotOutput("whitplot", height = "1000px"),
-          downloadButton("dlwhitplot", "Download Whittaker Plot", class = "btn btn-primary")
-        )
-      )
-    ),
-    
-    tabItem(tabName = "whit_family_plot",
-      fluidRow(
-        box(title = "Whittaker Family Plot", status = "primary", solidHeader = TRUE, width = 12,
-          plotOutput("whitplotFamily", height = "1000px"),
-          downloadButton("dlwhitplotFamily", "Download Whittaker Family Plot", class = "btn btn-primary")
-        )
-      ),
-      fluidRow(
-        box(title = "Whittaker Family Plot Selection", status = "primary", solidHeader = TRUE, width = 12,
-          plotlyOutput("whitplotSelect", height = "1000px")
-        )
-      )
-    ),
-    
-    tabItem(tabName = "species_selection",
-      fluidRow(
-        box(title = "Species Selection", status = "primary", solidHeader = TRUE, width = 12,
-          selectInput("selected_family", "Family", choices = sort(unique(cover_species_garden_full$family))),
-          selectInput("selected_genus", "Genus", choices = c("", NULL)),
-          selectInput("selected_species", "Species", choices = c("", NULL)),
-          downloadButton("downloadTablespecies", "Download table of species", class = "btn btn-primary"),
-          tableOutput("selectedData")
-        )
-      )
-    ),
-    
-    tabItem(tabName = "species_distribution",
-      fluidRow(
-        box(title = "Species Distribution", status = "primary", solidHeader = TRUE, width = 12,
-          selectInput("GPS_family", "Select a family", choices = NULL),
-          selectInput("GPS_genus", "Select a genus:", choices = c("", NULL)),
-          selectInput("GPS_species", "Select a species:", choices = c("", NULL), multiple = TRUE),
-          actionButton("goButton", "Go"),
-          leafletOutput("map", width = "100%", height = "500px"),
-          plotOutput("mapsSimple", height = "1000px"),
-          downloadButton("downloaddistrib", "Download Distribution map", class = "btn btn-primary")
-        )
-      )
-    ),
-
-    tabItem(tabName = "data_frame",
-      fluidRow(
-        box(title = "jbuf Merged Data Frame", status = "primary", solidHeader = TRUE, width = 12,
-          DT::dataTableOutput("table_jbuf"),
-          downloadButton("download_jbuf", "Download jbuf Data", class = "btn btn-primary")
-        )
-      ),
-      fluidRow(
-        box(title = "jbn Merged Data Frame", status = "primary", solidHeader = TRUE, width = 12,
-          DT::dataTableOutput("table_jbn"),
-          downloadButton("download_jbn", "Download jbn Data", class = "btn btn-primary")
-        )
-      )
-    ),
-    
-    tabItem(tabName = "bot_map",
-      fluidRow(
-        box(title = "Botanical Garden Maps", status = "primary", solidHeader = TRUE, width = 12,
-          tabsetPanel(
-            tabPanel("jbuf Map", leafletOutput("leaflet_jbuf", height = "800px")),
-            tabPanel("jbn Map", leafletOutput("leaflet_jbn", height = "800px"))
-          ),
-          downloadButton("download_map_jbuf", "Download jbuf Map", class = "btn btn-primary"),
-          downloadButton("download_map_jbn", "Download jbn Map", class = "btn btn-primary")
-        )
-      )
-    ),
-    
-    tabItem(tabName = "sample",
+tabItem(tabName = "garden_tree",
+  tags$h1("Garden Tree"),
+  helpText(tags$strong("This section displays the phylogenetic tree for each family present in the selected garden, allowing you to visualize the taxonomic coverage of the gardens.")),
   fluidRow(
-    box(title = "Progress Bar", status = "primary", solidHeader = TRUE, width = 12,
-      plotOutput("progress_plot", height = "600px")
+    plotOutput(outputId = "treePlot", height = "1500px"),
+    downloadButton("downloadFullPlot", "Download Garden Tree Plot", class = "btn btn-primary")
+  )
+),
+
+tabItem(tabName = "family_tree",
+  tags$h1("Family Tree"),
+  helpText(tags$strong("This section presents the Family Tree plot. For the selected family, you will see the genera present in the selected garden. You can choose the number of genera to include, and the model will suggest which genera to prioritize in order to best cover the taxonomic diversity of the family.")),
+  fluidRow(
+    box(
+  width = 12, status = "primary", solidHeader = TRUE,
+  selectInput("family", "Family to Test", choices = sort(unique(cover_species_garden_full$family)), selected = ""),
+  sliderInput("genus_select", "Number of genera to select", min = 1, max = 30, value = 5),
+  actionButton("actionfamily", "Apply Family Filter", icon = icon("play"), 
+               style = "color: #fff; background-color: #008d4c; border: none;"),
+  textOutput("textgenus"),
+  tableOutput("onlygenus")
+)
+  ),
+  fluidRow(
+    plotOutput("FamilyPlot", height = "800px"),
+    tableOutput("mytable"),
+    downloadButton("downloadFamilyPlot", "Download Family Tree Plot", class = "btn btn-primary"),
+    downloadButton("downloadTable", "Download Priority Table", class = "btn btn-primary")
+  )
+),
+
+tabItem(tabName = "plot_cover",
+  tags$h1("Taxonomic Coverage"),
+  helpText(tags$strong("These graphs illustrate the taxonomic coverage at the family, genus, and species levels within the selected gardens, providing a detailed view of biodiversity representation.")),
+  fluidRow(
+    plotOutput("coverplot", height = "1000px"),
+    downloadButton("downloadcoverplot", "Download Coverage Plot", class = "btn btn-primary")
+  ),
+  fluidRow(
+    plotOutput("vennplot", height = "1200px"),
+    downloadButton("dlvenplot", "Download Venn Plot", class = "btn btn-primary")
+  )
+),
+
+tabItem(tabName = "whit_garden_plot",
+  tags$h1("Whittaker Garden Plot"),
+  helpText(tags$strong("Whittaker diagrams allow you to position plants within biomes according to their temperature and precipitation preferences. This plot shows the overall environmental coverage of all plants present in the selected gardens.")),
+  fluidRow(
+    plotOutput("whitplot", height = "1000px"),
+    downloadButton("dlwhitplot", "Download Whittaker Plot", class = "btn btn-primary")
+  )
+),
+
+tabItem(tabName = "whit_family_plot",
+  tags$h1("Whittaker Family Plot"),
+  helpText(tags$strong("This diagram displays the environmental coverage of plants from the selected family, based on their climatic preferences.")),
+  fluidRow(
+    plotOutput("whitplotFamily", height = "1000px"),
+    downloadButton("dlwhitplotFamily", "Download Whittaker Family Plot", class = "btn btn-primary")
+  ),
+  fluidRow(
+    plotlyOutput("whitplotSelect", height = "1000px")
+  )
+),
+
+tabItem(tabName = "species_selection",
+  tags$h1("Species Selection"),
+  helpText(tags$strong("If you are looking for a specific species, you can find it here by selecting the corresponding family, then genus, and finally species.")),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      selectInput("selected_family", "Family", choices = sort(unique(cover_species_garden_full$family))),
+      selectInput("selected_genus", "Genus", choices = c("", NULL)),
+      selectInput("selected_species", "Species", choices = c("", NULL)),
+      downloadButton("downloadTablespecies", "Download table of species", class = "btn btn-primary"),
+      tableOutput("selectedData")
     )
   )
+),
+
+tabItem(tabName = "species_distribution",
+  tags$h1("Species Distribution"),
+  helpText(tags$strong("This section allows you to visualize the global distribution of the selected plant species.")),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      selectInput("GPS_family", "Select a family", choices = NULL),
+      selectInput("GPS_genus", "Select a genus:", choices = c("", NULL)),
+      selectInput("GPS_species", "Select a species:", choices = c("", NULL), multiple = TRUE),
+      actionButton("goButton", "Go"),
+      leafletOutput("map", width = "100%", height = "500px"),
+      plotOutput("mapsSimple", height = "1000px"),
+      downloadButton("downloaddistrib", "Download Distribution map", class = "btn btn-primary")
+    )
+  )
+),
+
+tabItem(tabName = "data_frame",
+  tags$h1("Data Frames"),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      helpText("This section displays the merged data frame linking the botanical gardens of Fribourg with our collected samples."),
+      DT::dataTableOutput("table_jbuf"),
+      downloadButton("download_jbuf", "Download jbuf Data", class = "btn btn-primary")
+    )
+  ),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      helpText("This section displays the merged data frame linking the botanical gardens of Neuchâtel with our collected samples."),
+      DT::dataTableOutput("table_jbn"),
+      downloadButton("download_jbn", "Download jbn Data", class = "btn btn-primary")
+    )
+  )
+),
+
+tabItem(tabName = "bot_map",
+  tags$h1("Botanical Garden Maps"),
+  helpText(tags$strong("This section shows the map with the geographic locations of our collected samples from the Fribourg and Neuchâtel botanical gardens.")),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      tabsetPanel(
+        tabPanel("Fribourg", leafletOutput("leaflet_jbuf", height = "800px")),
+        tabPanel("Neuchâtel", leafletOutput("leaflet_jbn", height = "800px"))
+      ),
+      downloadButton("download_map_jbuf", "Download jbuf Map", class = "btn btn-primary"),
+      downloadButton("download_map_jbn", "Download jbn Map", class = "btn btn-primary")
+    )
+  )
+),
+
+tabItem(tabName = "sample",
+  tags$h1("Sampling Progress"),
+  helpText(tags$strong("This graph shows the progress of our collections across the selected botanical gardens.")),
+  fluidRow(
+    plotOutput("progress_plot", height = "600px")
+  )
 )
+
+
   ))
 )
+
+
+
+
+
+
+
+
+
+
+
+
