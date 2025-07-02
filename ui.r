@@ -11,7 +11,7 @@ cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.
 
 ui <- dashboardPage(
   dashboardHeader(
-    title = tags$div(style = "font-size: 18px", "Cover Botanical Garden")
+    title = tags$div(style = "font-size: 18px", "Swiss Botanical Garden")
   ),
   dashboardSidebar(
     tags$style(HTML("
@@ -55,7 +55,8 @@ sidebarMenu(
            menuSubItem("Sampling", tabName = "sample", icon = icon("flask"))
   )
 )
-  ),dashboardBody(
+  ),
+  dashboardBody(
   tags$head(tags$style(HTML('
     /* Logo and top bar */
     .skin-blue .main-header .logo {
@@ -87,46 +88,79 @@ sidebarMenu(
       background-color: #00a75a;
       color: #ffffff;
     }
-    .tab-pane.active .btn-primary {
+     .tab-pane.active .btn-primary {
       background-color: #00a75a;
       border-color: #00a75a;
     }
+
+    .main-bg {
+      background-image: url("https://upload.wikimedia.org/wikipedia/commons/8/86/Herbarium_specimens.jpg");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center center;
+      min-height: 100vh;
+      padding: 30px;
+    }
+
+    .main-bg div {
+      background-color: rgba(255, 255, 255, 0.85);
+      padding: 20px;
+      border-radius: 10px;
+    }
+
   '))),
 
+  
   tabItems(
-    tabItem(tabName = "filters",
-fluidRow(
-    tags$div(style = "
+tabItem(tabName = "filters",
+  tags$div(
+    style = "
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: url('https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/main/www/bg.jpg');
+      background-size: cover;
+      background-position: center center;
+      min-height: 600px;
+      padding: 40px;
+      color: #000000;
+      font-weight: bold;
+      font-size: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    ",
+    # couche semi-transparente pour améliorer la lisibilité du texte
+    tags$div(
+      style = "
         background-color: rgba(255, 255, 255, 0.8);
-        padding: 40px;
+        padding: 30px;
         border-radius: 10px;
-        margin: 50px auto;
-        width: 90%;
-        max-width: 1000px;
-        text-align: center;
+        max-width: 900px;
+        margin-top: 50px;
       ",
-      tags$div(style = "font-size: 30px; font-weight: bold; margin-bottom: 20px;",
-        "Welcome to the Botanical Garden Coverage Application."
+      "Welcome to the Botanical Garden Coverage Application.",
+      tags$br(), tags$br(),
+      "To get started, select one or more gardens.",
+      tags$br(), tags$br(),
+      "Launch the script by clicking the 'Go' button.",
+      tags$br(), tags$br(),
+      "Explore the various tabs to view your results. Some pages include multiple graphs, so feel free to scroll.",
+      tags$br(), tags$br(),
+      "If you find a bug or have suggestions to improve the app’s usability, or if you work at a botanical garden and want your data included, please contact me at ",
+      tags$a(
+        href = "mailto:mazzarine.laboureau@unine.ch", 
+        "mazzarine.laboureau@unine.ch",
+        style = "color: #3c8dbc; font-weight: bold;"
       ),
-      tags$div(style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
-        "To get started, select one or more gardens."
-      ),
-      tags$div(style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
-        "Launch the script by clicking the 'Go' button."
-      ),
-      tags$div(style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
-        "Explore the various tabs to view your results. Some pages include multiple graphs, so feel free to scroll."
-      ),
-      tags$div(style = "font-size: 24px; font-weight: bold; margin-bottom: 20px;",
-        "If you find a bug or have suggestions to improve the app’s usability, or if you work at a botanical garden and want your data included, please contact me at ",
-        tags$a(href = "mailto:mazzarine.laboureau@unine.ch", "mazzarine.laboureau@unine.ch", style = "color: #3c8dbc; font-weight: bold;")
-      ),
-      tags$div(style = "font-size: 24px; font-weight: bold;",
-        "All data and scripts are available on my ",
-        tags$a(href = "https://github.com/MazzarineL/SBG_app", "GitHub page.")
-        )
-      )
-    ),
+      tags$br(), tags$br(),
+      "All data and scripts are available on my ",
+      tags$a(href = "https://github.com/MazzarineL/SBG_app", "GitHub page.")
+    )
+  )
+),
+
     
     tabItem(tabName = "garden_tree",
       helpText(tags$strong("This section displays the Garden Tree plot.")),
@@ -254,6 +288,5 @@ fluidRow(
     )
   )
 )
-  )
-)
+  ))
 )
