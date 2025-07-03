@@ -824,45 +824,42 @@ observeEvent(input$action, {
   labels_to_use <- replacement_mapping[input_code]
   colors_to_use <- color_values[input_code]
 
-  # Fonction d'affichage du Venn sans sauvegarde sur disque
   display_venn <- function(x, labels, colors, title) {
-    # Sauvegarder le répertoire courant
-    old_wd <- getwd()
-    # Changer temporairement de répertoire vers un répertoire temporaire
-    tmp_dir <- tempdir()
-    setwd(tmp_dir)
+  old_wd <- getwd()
+  tmp_dir <- tempdir()
+  setwd(tmp_dir)
 
-    plot_grob <- grid.grabExpr({
-      grid.newpage()
-      pushViewport(viewport(width = 0.5, height = 0.5))
-      venn_obj <- venn.diagram(
-        x,
-        filename = NULL,
-        category.names = labels,
-        fill = unname(colors),
-        lwd = 1,
-        lty = "blank",
-        cex = 0.8,
-        fontface = "italic",
-        cat.cex = 0,
-        cat.default.pos = "outer",
-        cat.dist = rep(0.05, length(labels))
-      )
-      grid.draw(venn_obj)
-      grid.text(title, x = 0.3, y = 0.95, gp = gpar(fontsize = 12, fontface = "bold"))
-      popViewport()
-    })
+  plot_grob <- grid.grabExpr({
+    grid.newpage()
+    pushViewport(viewport(width = 0.5, height = 0.5))
+    venn_obj <- venn.diagram(
+      x,
+      filename = NULL,
+      category.names = labels,
+      fill = unname(colors),
+      lwd = 1,
+      lty = "blank",
+      cex = 0.8,
+      fontface = "italic",
+      cat.cex = 0,
+      cat.default.pos = "outer",
+      cat.dist = rep(0.05, length(labels))
+    )
+    grid.draw(venn_obj)
+    grid.text(title, x = 0.3, y = 1.2, gp = gpar(fontsize = 12, fontface = "bold"))  # titre plus bas
+    popViewport()
+  })
 
-    # Revenir au répertoire d'origine
-    setwd(old_wd)
+  setwd(old_wd)
+  return(plot_grob)
+}
 
-    return(plot_grob)
-  }
+
 
   # Générer les Venn diagrams
-  venn_species <- display_venn(list_of_species, labels_to_use, colors_to_use, "Species coverage in Botanical Garden")
-  venn_genus   <- display_venn(list_of_genus,   labels_to_use, colors_to_use, "Genus coverage in Botanical Garden")
-  venn_family  <- display_venn(list_of_family,  labels_to_use, colors_to_use, "Family coverage in Botanical Garden")
+  venn_species <- display_venn(list_of_species, labels_to_use, colors_to_use, "Species")
+  venn_genus   <- display_venn(list_of_genus,   labels_to_use, colors_to_use, "Genus")
+  venn_family  <- display_venn(list_of_family,  labels_to_use, colors_to_use, "Family")
 
   # Légende
   legend_plot <- grid.grabExpr({
@@ -871,10 +868,12 @@ observeEvent(input$action, {
     grid.draw(legend_grob)
   })
 
-  # Affichage dans l'app Shiny
-  output$vennplot <- renderPlot({
-    grid.arrange(legend_plot, venn_species, venn_genus, venn_family, ncol = 1, heights = c(0.3, 1, 1, 1))
-  })
+  # Affichage dans l'app Shiny avec légende à droite
+output$vennplot <- renderPlot({
+  plots_col1 <- arrangeGrob(venn_species, venn_genus, venn_family, ncol = 1, heights = c(1,1,1))
+  final_plot <- arrangeGrob(plots_col1, legend_plot, ncol = 2, widths = c(3, 1))
+  grid.draw(final_plot)
+})
 
   # Téléchargement
   output$dlvenplot <- downloadHandler(
@@ -980,10 +979,11 @@ cover_whit <- cover_whit %>% distinct(species, .keep_all = TRUE)
             labels = labels,
             breaks = family_levels
           ) +
-          labs(title = "Whittaker Plot") +
           theme_minimal() +
+                theme(legend.title = element_text(size = 14),
+      legend.text = element_text(size = 12))+
           theme(panel.background = element_rect(fill = "white", color = NA)) +
-          guides(color = guide_legend(override.aes = list(size = 3)))
+          guides(color = guide_legend(override.aes = list(size = 5)))
 
         print(whit)
 
@@ -1036,10 +1036,11 @@ whitfamily <- plotbiomes::whittaker_base_plot() +
             labels = labels,        # Ensure labels is defined
             breaks = family_levels  # Ensure family_levels is defined
           ) +
-          labs(title = "Whittaker Plot") +
           theme_minimal() +
           theme(panel.background = element_rect(fill = "white", color = NA)) +
-          guides(color = guide_legend(override.aes = list(size = 1)))
+          theme(legend.title = element_text(size = 14),
+      legend.text = element_text(size = 12))+
+          guides(color = guide_legend(override.aes = list(size = 5)))
 
         print(whitfamily)
 
@@ -1177,15 +1178,43 @@ observeEvent(input$GPS_genus, {
   updateSelectInput(session, "GPS_species", choices = unique(filtered_data() %>% filter(family == input$GPS_family & genus == input$GPS_genus) %>% pull(species)))
 })
 
-# Fonction réactive pour le tracé de la carte
-observeEvent(input$goButton, {
-  req(filtered_data())
-
-  family_map <- filtered_data()
-
-  if (!is.null(input$GPS_species) && length(input$GPS_species) > 0) {
-    family_map <- family_map %>% filter(species %in% input$GPS_species)
-  }
+# Initialiser reactiveVal selected_species
+  selected_species <- reactiveVal(character(0))
+  
+  # Ajouter espèces à la sélection
+  observeEvent(input$addSpecies, {
+    req(input$GPS_species)
+    new_selection <- unique(c(selected_species(), input$GPS_species))
+    selected_species(new_selection)
+  })
+  
+  # Afficher la liste des espèces sélectionnées
+  output$selected_species_ui <- renderUI({
+    species <- selected_species()
+    if (length(species) == 0) {
+      tags$p("No species selected yet.")
+    } else {
+      tags$ul(
+        lapply(species, function(sp) tags$li(sp))
+      )
+    }
+  })
+  
+  # Bouton pour nettoyer la sélection
+  observeEvent(input$clearSelection, {
+    selected_species(character(0))
+  })
+  
+  # Modifier l’observeEvent du bouton Go pour utiliser selected_species()
+  observeEvent(input$goButton, {
+    req(filtered_data())
+  
+    family_map <- filtered_data()
+  
+    species_selected <- selected_species()
+    if (!is.null(species_selected) && length(species_selected) > 0) {
+      family_map <- family_map %>% filter(species %in% species_selected)
+    }
 
   # Initialiser un dataframe vide pour stocker les données GPS
   all_gps_data <- data.frame()
@@ -1607,42 +1636,93 @@ list_ch <- reactive({
 
 
   # jbuf_sf pour leaflet
-  jbuf_sf <- reactive({
-    df <- jbuf_merged()
-    df <- df[!is.na(df$x_coord) & !is.na(df$y_coord) & df$x_coord != "" & df$y_coord != "", ]
-    sf <- st_as_sf(df, coords = c("x_coord", "y_coord"), crs = 2056, remove = FALSE)
-    st_transform(sf, crs = 4326)
-  })
+ jbuf_sf <- reactive({
+  df <- jbuf_merged()
+  df <- df[!is.na(df$x_coord) & !is.na(df$y_coord) & df$x_coord != "" & df$y_coord != "", ]
+  
+  # Application des filtres textuels
+  if (nzchar(input$filter_sample_id)) {
+    df <- df[grepl(input$filter_sample_id, df$sample_id, ignore.case = TRUE), ]
+  }
+  if (nzchar(input$filter_taxon_name)) {
+    df <- df[grepl(input$filter_taxon_name, df$taxon_name, ignore.case = TRUE), ]
+  }
+  
+  sf <- st_as_sf(df, coords = c("x_coord", "y_coord"), crs = 2056, remove = FALSE)
+  st_transform(sf, crs = 4326)
+})
   
   # jbn_sf pour leaflet
-  jbn_sf <- reactive({
-    df <- jbn_merged()
-    df <- df[!is.na(df$x_coord) & !is.na(df$y_coord) & df$x_coord != "" & df$y_coord != "", ]
-    sf <- st_as_sf(df, coords = c("x_coord", "y_coord"), crs = 2056, remove = FALSE)
-    st_transform(sf, crs = 4326)
-  })
+jbn_sf <- reactive({
+  df <- jbn_merged()
+  df <- df[!is.na(df$x_coord) & !is.na(df$y_coord) & df$x_coord != "" & df$y_coord != "", ]
+  
+  if (nzchar(input$filter_sample_id)) {
+    df <- df[grepl(input$filter_sample_id, df$sample_id, ignore.case = TRUE), ]
+  }
+  if (nzchar(input$filter_taxon_name)) {
+    df <- df[grepl(input$filter_taxon_name, df$taxon_name, ignore.case = TRUE), ]
+  }
+  
+  sf <- st_as_sf(df, coords = c("x_coord", "y_coord"), crs = 2056, remove = FALSE)
+  st_transform(sf, crs = 4326)
+})
 
     # jbn_sf pour leaflet
-  jbc_sf <- reactive({
-    df <- jbc_merged()
-    df <- df[!is.na(df$x_coord) & !is.na(df$y_coord) & df$x_coord != "" & df$y_coord != "", ]
-    sf <- st_as_sf(df, coords = c("x_coord", "y_coord"), crs = 2056, remove = FALSE)
-    st_transform(sf, crs = 4326)
-  })
+jbc_sf <- reactive({
+  df <- jbc_merged()
+  df <- df[!is.na(df$x_coord) & !is.na(df$y_coord) & df$x_coord != "" & df$y_coord != "", ]
   
+  if (nzchar(input$filter_sample_id)) {
+    df <- df[grepl(input$filter_sample_id, df$sample_id, ignore.case = TRUE), ]
+  }
+  if (nzchar(input$filter_taxon_name)) {
+    df <- df[grepl(input$filter_taxon_name, df$taxon_name, ignore.case = TRUE), ]
+  }
+  
+  sf <- st_as_sf(df, coords = c("x_coord", "y_coord"), crs = 2056, remove = FALSE)
+  st_transform(sf, crs = 4326)
+})
   
   # Render DataTables
-  output$table_jbuf <- renderDT({
-    datatable(jbuf_merged(), options = list(pageLength = 10, scrollX = TRUE))
-  })
+ output$table_jbuf <- renderDT({
+  df <- jbuf_merged()
   
-  output$table_jbn <- renderDT({
-    datatable(jbn_merged(), options = list(pageLength = 10, scrollX = TRUE))
-  })
+  if (nzchar(input$filter_sample_id)) {
+    df <- df[grepl(input$filter_sample_id, df$sample_id, ignore.case = TRUE), ]
+  }
+  if (nzchar(input$filter_taxon_name)) {
+    df <- df[grepl(input$filter_taxon_name, df$taxon_name, ignore.case = TRUE), ]
+  }
+  
+  datatable(df, options = list(pageLength = 10, scrollX = TRUE))
+})
+  
+output$table_jbn <- renderDT({
+  df <- jbn_merged()
+  
+  if (nzchar(input$filter_sample_id)) {
+    df <- df[grepl(input$filter_sample_id, df$sample_id, ignore.case = TRUE), ]
+  }
+  if (nzchar(input$filter_taxon_name)) {
+    df <- df[grepl(input$filter_taxon_name, df$taxon_name, ignore.case = TRUE), ]
+  }
+  
+  datatable(df, options = list(pageLength = 10, scrollX = TRUE))
+})
 
-    output$table_jbc <- renderDT({
-    datatable(jbc_merged(), options = list(pageLength = 10, scrollX = TRUE))
-  })
+output$table_jbc <- renderDT({
+  df <- jbc_merged()
+  
+  if (nzchar(input$filter_sample_id)) {
+    df <- df[grepl(input$filter_sample_id, df$sample_id, ignore.case = TRUE), ]
+  }
+  if (nzchar(input$filter_taxon_name)) {
+    df <- df[grepl(input$filter_taxon_name, df$taxon_name, ignore.case = TRUE), ]
+  }
+  
+  datatable(df, options = list(pageLength = 10, scrollX = TRUE))
+})
   
   
   # Render Leaflet maps
@@ -1745,4 +1825,5 @@ output$progress_plot <- renderPlot({
 })
 
 }
+
 

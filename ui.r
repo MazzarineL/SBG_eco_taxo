@@ -271,7 +271,7 @@ tabItem(tabName = "plot_cover",
     )
   ),
   fluidRow(
-    plotOutput("vennplot", height = "600px")
+    plotOutput("vennplot", height = "800px")
   ),
   fluidRow(
   column(
@@ -337,16 +337,27 @@ tabItem(tabName = "species_selection",
     )
   )
 ),
-
 tabItem(tabName = "species_distribution",
   tags$h1("Species Distribution"),
   helpText(tags$strong("This section allows you to visualize the global distribution of the selected plant species.")),
   fluidRow(
     box(
-      width = 12, status = "primary", solidHeader = TRUE,
+      width = 6, status = "primary", solidHeader = TRUE,
       selectInput("GPS_family", "Select a family", choices = NULL),
       selectInput("GPS_genus", "Select a genus:", choices = c("", NULL)),
       selectInput("GPS_species", "Select a species:", choices = c("", NULL), multiple = TRUE),
+      actionButton("addSpecies", "Add Species to Selection")
+    ),
+    box(
+      width = 6, status = "info", solidHeader = TRUE,
+      tags$h4("Selected Species"),
+      uiOutput("selected_species_ui"),
+      actionButton("clearSelection", "Clear Selected Species", class = "btn btn-warning")
+    )
+  ),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
       actionButton("goButton", "Go"),
       leafletOutput("map", width = "100%", height = "500px"),
       plotOutput("mapsSimple", height = "1000px"),
@@ -395,20 +406,24 @@ tabItem(tabName = "bot_map",
   tags$h1("Botanical Garden Maps"),
   helpText(tags$strong("This section shows the map with the geographic locations of our collected samples from the Fribourg and Neuchâtel botanical gardens.")),
   fluidRow(
-    box(
-      width = 12, status = "primary", solidHeader = TRUE,
-      tabsetPanel(
-        tabPanel("Fribourg", leafletOutput("leaflet_jbuf", height = "800px")),
-        tabPanel("Neuchâtel", leafletOutput("leaflet_jbn", height = "800px")),
-        tabPanel("Champex", leafletOutput("leaflet_jbc", height = "800px"))
-      ),
-      div(style = "text-align: right; margin-top: 10px;",
+  column(6, textInput("filter_sample_id", "Filter Sample ID")),
+  column(6, textInput("filter_taxon_name", "Filter Taxon Name"))
+),
+fluidRow(
+  box(
+    width = 12,
+    tabsetPanel(
+      tabPanel("Fribourg", leafletOutput("leaflet_jbuf", height = "800px")),
+      tabPanel("Neuchâtel", leafletOutput("leaflet_jbn", height = "800px")),
+      tabPanel("Champex", leafletOutput("leaflet_jbc", height = "800px"))
+    ),
+    div(style = "text-align: right; margin-top: 10px;",
           downloadButton("download_map_jbuf", "Download jbuf Map", class = "btn btn-primary"),
           downloadButton("download_map_jbn", "Download jbn Map", class = "btn btn-primary"),
           downloadButton("download_map_jbc", "Download jbc Map", class = "btn btn-primary")
       )
-    )
   )
+)
 ),
 
 tabItem(tabName = "sample",
@@ -423,5 +438,6 @@ tabItem(tabName = "sample",
 
   ))
 )
+
 
 
