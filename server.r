@@ -36,6 +36,8 @@ library(nngeo)
 library(stringi)
 library(stringr)
 library(ggspatial)
+library(tibble)
+library(tidyr) 
 
 clean_family <- function(fam_vec) {
   fam_vec <- trimws(fam_vec) # enlève espaces autour
@@ -89,9 +91,8 @@ family_levels <- c(
   "ch_fr", "ch_fr_ne", "ch_fr_la", "ch_fr_ge", 
   "ch_fr_ge_ne", "ch_fr_ge_la", "ch_fr_ge_la_ne", 
   "ch_ge", "ch_ge_ne", "ch_ge_la", "ch_ge_la_ne", 
-  "ch_la", "ch_ne",
-  "ch", 
-  NA
+  "ch_la", "ch_ne", 
+  "NA"
 )
 
 # Couleurs (ajoute/modifie selon préférences)
@@ -116,7 +117,7 @@ generate_labels <- function(family_levels) {
   labels <- sapply(family_levels, function(code) {
     locations <- c()
     if (grepl("fr", code)) locations <- c(locations, "Fribourg")
-    if (grepl("ge", code)) locations <- c(locations, "Genève")
+    if (grepl("ge", code)) locations <- c(locations, "Geneva")
     if (grepl("la", code)) locations <- c(locations, "Lausanne")
     if (grepl("ne", code)) locations <- c(locations, "Neuchâtel")
     if (grepl("ch", code)) locations <- c(locations, "Champex")
@@ -135,35 +136,37 @@ labels <- generate_labels(family_levels)
 
 # Mapping lisible pour les légendes
 replacement_mapping <- c(
-  "fr" = "Fribourg", "ne" = "Neuchâtel", "la" = "Lausanne", "ge" = "Genève", "ch" = "Champex",
+  "fr" = "Fribourg", "ne" = "Neuchâtel", "la" = "Lausanne", "ge" = "Geneva", "ch" = "Champex",
   "fr_ne" = "Fribourg and Neuchâtel",
   "fr_la" = "Fribourg and Lausanne",
   "fr_la_ne" = "Fribourg, Lausanne, and Neuchâtel",
-  "fr_ge" = "Fribourg and Genève",
-  "fr_ge_la" = "Fribourg, Genève, and Lausanne",
-  "fr_ge_la_ne" = "Fribourg, Genève, Lausanne, and Neuchâtel",
-  "fr_ge_ne" = "Fribourg, Genève, and Neuchâtel",
-  "ge_la" = "Genève and Lausanne",
-  "ge_la_ne" = "Genève, Lausanne, and Neuchâtel",
-  "ge_ne" = "Genève and Neuchâtel",
+  "fr_ge" = "Fribourg and Geneva",
+  "fr_ge_la" = "Fribourg, Geneva, and Lausanne",
+  "fr_ge_la_ne" = "Fribourg, Geneva, Lausanne, and Neuchâtel",
+  "fr_ge_ne" = "Fribourg, Geneva, and Neuchâtel",
+  "ge_la" = "Geneva and Lausanne",
+  "ge_la_ne" = "Geneva, Lausanne, and Neuchâtel",
+  "ge_ne" = "Geneva and Neuchâtel",
   "la_ne" = "Lausanne and Neuchâtel",
   "ch_fr" = "Champex and Fribourg",
   "ch_fr_ne" = "Champex, Fribourg and Neuchâtel",
   "ch_fr_la" = "Champex, Fribourg and Lausanne",
-  "ch_fr_ge" = "Champex, Fribourg and Genève",
-  "ch_fr_ge_ne" = "Champex, Fribourg, Genève and Neuchâtel",
-  "ch_fr_ge_la" = "Champex, Fribourg, Genève and Lausanne",
-  "ch_fr_ge_la_ne" = "Champex, Fribourg, Genève, Lausanne and Neuchâtel",
-  "ch_ge" = "Champex and Genève",
-  "ch_ge_ne" = "Champex, Genève and Neuchâtel",
-  "ch_ge_la" = "Champex, Genève and Lausanne",
-  "ch_ge_la_ne" = "Champex, Genève, Lausanne and Neuchâtel",
+  "ch_fr_ge" = "Champex, Fribourg and Geneva",
+  "ch_fr_ge_ne" = "Champex, Fribourg, Geneva and Neuchâtel",
+  "ch_fr_ge_la" = "Champex, Fribourg, Geneva and Lausanne",
+  "ch_fr_ge_la_ne" = "Champex, Fribourg, Geneva, Lausanne and Neuchâtel",
+  "ch_ge" = "Champex and Geneva",
+  "ch_ge_ne" = "Champex, Geneva and Neuchâtel",
+  "ch_ge_la" = "Champex, Geneva and Lausanne",
+  "ch_ge_la_ne" = "Champex, Geneva, Lausanne and Neuchâtel",
   "ch_la" = "Champex and Lausanne",
   "ch_ne" = "Champex and Neuchâtel",
   "NA" = "Not available"
 )
 
-
+#####################################
+#########PHYLO TREE GARDEN ##############
+#####################################
 observeEvent(input$action, {
   withProgress(message = 'Loading data...', value = 0, {
     output$treePlot <- NULL
@@ -246,7 +249,9 @@ observeEvent(input$action, {
 
 
 
-############################################
+#####################################
+#########PHYLO TREE FAMILY ##############
+#####################################
 observeEvent(c(input$actionfamily, input$genus_select), {
   withProgress(message ='Loading data...', value = 0, {
     req(input$Garden != "")
@@ -635,23 +640,14 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
 #########BARPLOT COVER ##############
 #####################################
 observeEvent(input$action, {
-  output$coverplot <- NULL
   req(input$Garden != "")
-
-  input_code <- input$Garden
-  input_values <- unlist(strsplit(input_code, "_"))
+  input_values <- unlist(strsplit(input$Garden, "_"))
 
   cover_plot <- cover_species_garden_full %>%
     dplyr::select(species, genus, family, code_garden)
 
-  # -- Définir les codes valides
   valid_elements <- c("ne", "la", "fr", "ge", "ch")
-  code_list <- c("fr", "ne", "la", "ge", "ch", 
-                 "fr_ne", "fr_la", "fr_la_ne", "fr_ge", 
-                 "fr_ge_la", "fr_ge_la_ne", "fr_ge_ne", 
-                 "ge_la", "ge_la_ne", "ge_ne", "la_ne", "NA")
 
-  # -- Filtrer les codes de jardin selon la sélection utilisateur
   filter_code <- function(code, input_values) {
     elements <- unlist(strsplit(code, "_"))
     filtered <- elements[elements %in% input_values]
@@ -659,20 +655,15 @@ observeEvent(input$action, {
     paste(sort(filtered), collapse = "_")
   }
 
-  cover_plot$code_garden <- sapply(cover_plot$code_garden, filter_code, input_values = input_values)
-  cover_plot <- dplyr::filter(cover_plot, code_garden != "NA")
-
-  # -- Recomposer codes (limités aux codes valides)
   recompose_code <- function(codes) {
     elements <- unique(unlist(strsplit(codes, "_")))
     valid <- elements[elements %in% valid_elements]
     if (length(valid) == 0) return("NA")
     final_code <- paste(sort(valid), collapse = "_")
-    if (final_code %in% code_list) return(final_code)
+    if (final_code %in% family_levels) return(final_code)
     return("NA")
   }
 
-  # -- Fonction générique pour species/genus/family
   create_cover_dataframe <- function(data, group_var) {
     unique_groups <- unique(data[[group_var]])
     cover <- lapply(unique_groups, function(g) {
@@ -685,11 +676,6 @@ observeEvent(input$action, {
     return(df)
   }
 
-  species_cover <- create_cover_dataframe(cover_plot, "species")
-  genus_cover   <- create_cover_dataframe(cover_plot, "genus")
-  family_cover  <- create_cover_dataframe(cover_plot, "family")
-
-  # -- Table + padding NA
   add_padding <- function(tbl, total_expected) {
     total_current <- sum(tbl)
     to_add <- total_expected - total_current
@@ -701,11 +687,6 @@ observeEvent(input$action, {
     return(tbl)
   }
 
-  species_table <- add_padding(table(species_cover$code_garden), 390000)
-  genus_table   <- add_padding(table(genus_cover$code_garden),   14282)
-  family_table  <- add_padding(table(family_cover$code_garden),  508)
-
-  # -- Combine in final df
   build_df <- function(tbl, type_label) {
     data.frame(
       type = type_label,
@@ -716,17 +697,29 @@ observeEvent(input$action, {
     )
   }
 
+  # Traitement centralisé
+  cover_plot$code_garden <- sapply(cover_plot$code_garden, filter_code, input_values = input_values)
+  cover_plot <- dplyr::filter(cover_plot, code_garden != "NA")
+
+  species_cover <- create_cover_dataframe(cover_plot, "species")
+  genus_cover   <- create_cover_dataframe(cover_plot, "genus")
+  family_cover  <- create_cover_dataframe(cover_plot, "family")
+
+  species_table <- add_padding(table(species_cover$code_garden), 390000)
+  genus_table   <- add_padding(table(genus_cover$code_garden),   14282)
+  family_table  <- add_padding(table(family_cover$code_garden),  508)
+
   table_full <- rbind(
     build_df(family_table, "family"),
     build_df(genus_table, "genus"),
     build_df(species_table, "species")
   )
-  
-  table_full$garden <- factor(table_full$garden, levels = code_list)
 
-  # -- Render plot
+  table_full$garden <- factor(table_full$garden, levels = family_levels)
+
+  # BARPLOT
   output$coverplot <- renderPlot({
-    gg2 <- ggplot(table_full, aes(x = type, y = count, fill = garden)) +
+    ggplot(table_full, aes(x = type, y = count, fill = garden)) +
       geom_bar(stat = "identity", position = "stack") +
       labs(x = "Type", y = "Count", fill = "Garden") +
       ggtitle("Taxonomic Coverage per Garden Combination") +
@@ -741,16 +734,54 @@ observeEvent(input$action, {
         legend.title = element_text(size = 16),
         legend.text = element_text(size = 13)
       )
-    print(gg2)
   })
 
-  # -- Download handler
+  # PIE CHART
+  output$piechart <- renderPlot({
+    ggplot(table_full, aes(x = "", y = count, fill = garden)) +
+      geom_bar(stat = "identity", width = 1, color = "white") +
+      coord_polar("y") +
+      facet_wrap(~type, scales = "free") +
+      labs(title = "Taxonomic Coverage per Garden Combination",
+           fill = "Garden") +
+      scale_fill_manual(
+        values = color_values[names(color_values) %in% table_full$garden],
+        labels = replacement_mapping[names(color_values) %in% table_full$garden],
+        breaks = names(color_values)[names(color_values) %in% table_full$garden]
+      ) +
+      theme_void() +
+      theme(
+        strip.text = element_text(size = 14, face = "bold"),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12)
+      )
+  })
+
+  # DOWNLOADS
   output$downloadcoverplot <- downloadHandler(
     filename = function() {
       paste0("Barplot_coverage_", Sys.Date(), ".jpg")
     },
     content = function(file) {
-      ggsave(filename = file, plot = last_plot(), device = "jpg", width = 14, height = 10)
+      ggsave(filename = file,
+             plot = ggplot(table_full, aes(x = type, y = count, fill = garden)) +
+                      geom_bar(stat = "identity", position = "stack") +
+                      facet_wrap(~type, scales = "free"),
+             device = "jpg", width = 14, height = 10)
+    }
+  )
+
+  output$dlpiechart <- downloadHandler(
+    filename = function() {
+      paste0("PieChart_coverage_", Sys.Date(), ".png")
+    },
+    content = function(file) {
+      ggsave(file,
+             plot = ggplot(table_full, aes(x = "", y = count, fill = garden)) +
+                      geom_bar(stat = "identity", width = 1, color = "white") +
+                      coord_polar("y") +
+                      facet_wrap(~type, scales = "free"),
+             width = 10, height = 8)
     }
   )
 })
@@ -758,6 +789,7 @@ observeEvent(input$action, {
 
 
 
+ 
 
 #####################################
 ######### VENNPLOT ##############
@@ -856,13 +888,10 @@ observeEvent(input$action, {
 })
 
 
-
-
-
-
- 
-
-##################################################################
+#####################################
+#########WHITAKKER GARDEN ##############
+#####################################
+data_clim_reactive <- reactiveVal(NULL)
 observeEvent(input$action, {
   withProgress(message = 'Processing...', value = 0, {
     
@@ -905,28 +934,34 @@ observeEvent(input$action, {
     }
 
     incProgress(4/6, detail = "Filtering data based on input...")
-    if(length(input_code) == 1) {
-      cover_whit$code_garden <- ifelse(!grepl(paste(input_code, collapse = "|"), cover_whit$code_garden), NA, cover_whit$code_garden)
-      cover_whit$code_garden[!is.na(cover_whit$code_garden)] <- paste(input_code, collapse = "_")
-      cover_whit <- cover_whit %>% filter(!is.na(code_garden))
-    } else {
-      selected_values <- paste(input_code, collapse = "|")
-      cover_whit$code_garden[!grepl(selected_values, cover_whit$code_garden)] <- NA
-      entier <- c("fr", "ne", "la","ge","ch")
-      diff <- setdiff(entier, input_code)
-      cover_whit$code_garden <- gsub(paste(diff, collapse = "|"), "", cover_whit$code_garden)
-      cover_whit$code_garden <- gsub("_+", "_", cover_whit$code_garden)
-      cover_whit$code_garden <- gsub("^_|_$", "", cover_whit$code_garden)
-      cover_whit <- cover_whit %>% filter(!is.na(code_garden))
-    }
+
+
+if(length(input_code) == 1) {
+  cover_whit <- cover_whit %>% filter(grepl(input_code, code_garden))
+  cover_whit$code_garden <- input_code
+} else {
+  cover_whit <- cover_whit %>% filter(sapply(code_garden, function(x) any(strsplit(x, "_")[[1]] %in% input_code)))
+  
+  # Rebuild code_garden as concatenation of selected gardens per species
+  cover_whit$code_garden <- sapply(cover_whit$code_garden, function(x) {
+    gardens <- strsplit(x, "_")[[1]]
+    paste(sort(intersect(gardens, input_code)), collapse = "_")
+  })
+}
+
+cover_whit <- cover_whit %>% distinct(species, .keep_all = TRUE)
+
     cover_whit <- cover_whit %>% dplyr::distinct(species, .keep_all = TRUE)
 
     incProgress(5/6, detail = "Merging climatic data...")
     data_clim <- merge(data_clim, cover_whit, by = "species")
+
     data_clim$jardin <- as.factor(data_clim$code_garden)
     data_clim <- data_clim %>% dplyr::mutate(temperature = ifelse(species %in% c("Drosera spathulata", "Duvalia modesta"), 25, temperature))
     data_clim <- data_clim %>% filter(!is.na(temperature))
     data_clim <- data_clim[!duplicated(data_clim$species), ]
+
+    data_clim_reactive(data_clim)
 
     incProgress(6/6, detail = "Generating plot...")
     output$whitplot <- renderPlot({
@@ -936,7 +971,7 @@ observeEvent(input$action, {
                      aes(x = temperature, 
                          y = precipitation,
                          color = code_garden),  
-                     size = 0.5,             
+                     size = 1.5,             
                      shape = 16,
                      alpha = 0.8) +
           scale_color_manual(
@@ -969,14 +1004,18 @@ observeEvent(input$action, {
 
 
 
-
+#####################################
+#########WHITAKKER FAMILY ##############
+#####################################
 
 
 output$whitplotFamily <- renderPlot({
 isolate({
 
 family_test <- input$family
+data_clim <- data_clim_reactive()
 data_clim_sub <- subset(data_clim, family == family_test)
+
 
 data_clim_sub <- data_clim_sub %>%
   filter(!is.na(temperature) & !is.na(precipitation) & 
@@ -988,7 +1027,7 @@ whitfamily <- plotbiomes::whittaker_base_plot() +
                      aes(x = temperature, 
                          y = precipitation,
                          color = code_garden),  
-                     size = 1,             
+                     size = 2,             
                      shape = 16,
                      alpha = 0.8) +
           scale_color_manual(
@@ -1111,8 +1150,9 @@ output$whitplotSelect <- renderPlotly({
 
 
 
-  ##############################################
-
+#####################################
+#########SPECIES MAP ##############
+#####################################
 # Filtrer les données en fonction du jardin sélectionné
 
 observe({
@@ -1302,8 +1342,10 @@ output$downloaddistrib <- downloadHandler(
 
 
   
-  ##############################################################
 
+#####################################
+#########SPECIES SELECT ##############
+#####################################
 cover_species <- cover_species_garden_full
 all_species <- all_species_taxo
 
@@ -1454,15 +1496,20 @@ output$downloadTablespecies <- downloadHandler(
     df$sous_groupe[is.na(df$sous_groupe)] <- df$groupe[is.na(df$sous_groupe)]
     
     df <- df[!duplicated(df$code_ipen), ]
-    df
+    
   })
   
+list_ch <- reactive({
+  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_champex.csv"), sep = ";") %>%
+    select(Famille, Genre_nouveau, Sps_nouveau) %>%
+    rename(Familly = Famille, Genus = Genre_nouveau, Species = Sps_nouveau) 
+   
+})
 
-  list_ch <- reactive({
-    read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_champex.csv"), sep = ",") %>%
-      select(ipen, secteur, idTaxon, matched_name) %>%
-      mutate(idTaxon = sapply(strsplit(trimws(idTaxon), "\\s+"), function(x) paste(head(x, 2), collapse = " ")))
-  })
+
+
+
+
 
   # jbuf_merged
   jbuf_merged <- reactive({
@@ -1519,6 +1566,46 @@ output$downloadTablespecies <- downloadHandler(
     merged
   })
   
+
+
+
+
+
+  # jbc_merged
+ jbc_merged <- reactive({
+    req(data())
+    d <- data()
+    filtered <- d %>% filter(grepl("dbgi", sample_id, ignore.case = TRUE))
+    filtered$taxon_name <- ifelse(is.na(filtered$taxon_name), "", filtered$taxon_name)
+    filtered$sample_name <- ifelse(is.na(filtered$sample_name), "", filtered$sample_name)
+    filtered$taxon_name <- paste(filtered$taxon_name, filtered$sample_name)
+    filtered$taxon_name <- sapply(strsplit(trimws(filtered$taxon_name), "\\s+"), function(x) paste(head(x, 2), collapse = " "))
+    
+    jbc <- filtered[filtered$qfield_project == "jbc", ]
+    jbc <- jbc[, c("taxon_name", "sample_id", "x_coord", "y_coord", "qfield_project")]
+    jbc <- jbc[!is.na(jbc$taxon_name) & jbc$taxon_name != "", ]
+    
+    jbc$taxon_name <- tolower(jbc$taxon_name)
+    jbc$taxon_name <- gsub("[^a-z0-9 ]", "", jbc$taxon_name)
+    jbc$taxon_name <- trimws(jbc$taxon_name)
+    
+    ch <- list_ch()
+    ch$idTaxon <- paste(ch$Genus, ch$Species, sep = " ")
+    ch$idTaxon <- iconv(ch$idTaxon, from = "latin1", to = "UTF-8", sub = "")
+    ch$idTaxon <- tolower(ch$idTaxon)
+    ch$idTaxon <- tolower(ch$idTaxon)
+    ch$idTaxon <- gsub("[^a-z0-9 ]", "", ch$idTaxon)
+    ch$idTaxon <- trimws(ch$idTaxon)
+    
+    merged <- merge(jbc, ch, by.x = "taxon_name", by.y = "idTaxon", all.x = TRUE)
+    merged <- merged[!duplicated(merged$sample_id), ]
+    merged
+  })
+
+
+
+
+
   # jbuf_sf pour leaflet
   jbuf_sf <- reactive({
     df <- jbuf_merged()
@@ -1534,6 +1621,15 @@ output$downloadTablespecies <- downloadHandler(
     sf <- st_as_sf(df, coords = c("x_coord", "y_coord"), crs = 2056, remove = FALSE)
     st_transform(sf, crs = 4326)
   })
+
+    # jbn_sf pour leaflet
+  jbc_sf <- reactive({
+    df <- jbc_merged()
+    df <- df[!is.na(df$x_coord) & !is.na(df$y_coord) & df$x_coord != "" & df$y_coord != "", ]
+    sf <- st_as_sf(df, coords = c("x_coord", "y_coord"), crs = 2056, remove = FALSE)
+    st_transform(sf, crs = 4326)
+  })
+  
   
   # Render DataTables
   output$table_jbuf <- renderDT({
@@ -1543,6 +1639,11 @@ output$downloadTablespecies <- downloadHandler(
   output$table_jbn <- renderDT({
     datatable(jbn_merged(), options = list(pageLength = 10, scrollX = TRUE))
   })
+
+    output$table_jbc <- renderDT({
+    datatable(jbc_merged(), options = list(pageLength = 10, scrollX = TRUE))
+  })
+  
   
   # Render Leaflet maps
   output$leaflet_jbuf <- renderLeaflet({
@@ -1578,43 +1679,70 @@ output$downloadTablespecies <- downloadHandler(
   })
 
 
-
-
-
-
-
-
-advance_long <- tibble::tribble(
-  ~status,  ~garden, ~count,
-  "all",     "jbn",     2230,
-  "all",     "jbuf",    5225,
-  "sampled", "jbn",     1634,
-  "sampled", "jbuf",    2364
-)
-advance_long <- advance_long %>%
-  group_by(garden) %>%
-  mutate(max_count = max(count),
-         prop = count / max_count * 100) %>%
-  ungroup()
-
-  output$progress_plot <- renderPlot({
-    ggplot(advance_long, aes(x = garden, y = prop, fill = status)) +
-      geom_bar(stat = "identity", position = "stack", width = 0.6) +
-      scale_fill_manual(values = c("all" = "grey70", "sampled" = "orange")) +
-      coord_flip() +  # barre horizontale = plus "barre de chargement"
-      labs(x = "Garden", y = "Progress (%)", fill = "Status") +
-      theme_minimal(base_size = 16) +
-      theme(
-        legend.position = "top",
-        axis.title.y = element_blank(),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor = element_blank()
-      ) +
-      geom_text(aes(label = paste0(round(prop), "%")),
-                position = position_stack(vjust = 0.5),
-                color = "black",
-                size = 5)
+  output$leaflet_jbc <- renderLeaflet({
+    sf <- jbc_sf()
+    req(sf)
+    leaflet(sf) %>%
+      addTiles() %>%
+      addCircleMarkers(
+        radius = 4,
+        color = "blue",
+        stroke = FALSE,
+        fillOpacity = 0.7,
+        popup = ~paste0("<b>Sample ID:</b> ", sample_id, "<br>",
+                        "<b>Taxon:</b> ", taxon_name)
+      ) %>%
+      addScaleBar(position = "bottomleft")
   })
+
+
+
+
+
+
+progress_data <- reactive({
+  req(list_neu(), list_ch(), list_fr(), jbn_merged(), jbc_merged(), jbuf_merged())
+  
+  advance_long <- tibble::tibble(
+    status = c("all", "all", "all", "sampled", "sampled", "sampled"),
+    garden = c("jbn", "jbc", "jbuf", "jbn", "jbc", "jbuf"),
+    n = c(
+      nrow(list_neu()),     # all jbn
+      nrow(list_ch()),      # all jbc
+      nrow(list_fr()),      # all jbuf
+      nrow(jbn_merged()),   # sampled jbn
+      nrow(jbc_merged()),   # sampled jbc
+      nrow(jbuf_merged())   # sampled jbuf
+    )
+  )
+  
+  percent_df <- advance_long %>%
+    tidyr::pivot_wider(names_from = status, values_from = n) %>%
+    mutate(percent_sampled = sampled / all * 100)
+  
+  return(percent_df)
+})
+
+
+output$progress_plot <- renderPlot({
+  df <- progress_data()
+  
+  ggplot(df, aes(x = garden, y = percent_sampled)) +
+    geom_col(fill = "orange", width = 0.6) +
+    coord_flip() +
+    labs(x = "Garden", y = "Individuals sampled (%)", fill = NULL) +
+    theme_minimal(base_size = 16) +
+    theme(
+      legend.position = "none",
+      axis.title.y = element_blank(),
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank()
+    ) +
+    geom_text(aes(label = paste0(round(percent_sampled), "%")),
+              hjust = 1.1,
+              color = "black",
+              size = 5)
+})
 
 }
 

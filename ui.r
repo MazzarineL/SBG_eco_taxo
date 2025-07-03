@@ -217,7 +217,10 @@ tabItem(tabName = "garden_tree",
 
 tabItem(tabName = "family_tree",
   tags$h1("Family Tree"),
-  helpText(tags$strong("This section presents the Family Tree plot. For the selected family, you will see the genera present in the selected garden. You can choose the number of genera to include, and the model will suggest which genera to prioritize in order to best cover the taxonomic diversity of the family.")),
+  helpText(tags$strong("This section presents the Family Tree plot.
+For the selected family, you will see the genera present in the selected garden. You can choose the number of genera to include, and the model will suggest which genera to prioritize in order to best cover the taxonomic diversity of the family.
+Please note that the tree might display more blue branches than the number of genera you selected. This occurs because the model cannot always reach the exact number requested and instead aims to provide the closest match to maximize coverage.
+If the tree does not display any selected genera, it means that the number requested is too high relative to what is available. In that case, please try selecting all genera.")),
   fluidRow(
     box(
       width = 12, status = "primary", solidHeader = TRUE,
@@ -268,8 +271,19 @@ tabItem(tabName = "plot_cover",
     )
   ),
   fluidRow(
-    plotOutput("vennplot", height = "1200px")
+    plotOutput("vennplot", height = "600px")
+  ),
+  fluidRow(
+  column(
+    width = 12,
+    div(style = "text-align: right; margin-bottom: 10px;",
+        downloadButton("dlpiechart", "Download Pie Chart", class = "btn btn-primary")
+    )
   )
+),
+fluidRow(
+  plotOutput("piechart", height = "600px")  
+)
 ),
 
 tabItem(tabName = "whit_garden_plot",
@@ -364,7 +378,17 @@ tabItem(tabName = "data_frame",
           downloadButton("download_jbn", "Download jbn Data", class = "btn btn-primary")
       )
     )
-  )
+  ),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      helpText("This section displays the merged data frame linking the botanical gardens of Champex with our collected samples."),
+      DT::dataTableOutput("table_jbc"),
+      div(style = "text-align: right; margin-top: 10px;",
+          downloadButton("download_jbc", "Download jbc Data", class = "btn btn-primary")
+      )
+    )
+  ),
 ),
 
 tabItem(tabName = "bot_map",
@@ -399,15 +423,5 @@ tabItem(tabName = "sample",
 
   ))
 )
-
-
-
-
-
-
-
-
-
-
 
 
