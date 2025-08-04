@@ -127,11 +127,45 @@ gen_tax <- data.frame(
 ##########################################
 ### CHAMPEX
 
-list_champex <- read_excel(file.path(folder, "list_champex.xlsx"))
+list_champex <- read.csv(file.path(folder, "list_champex.csv"), sep =";")
 
 cha_tax <- data.frame(
   species = paste(list_champex$Genre_nouveau, list_champex$Sps_nouveau),
   genus = list_champex$Genre_nouveau,
   family = list_champex$Famille,
   garden = "ch"
+)
+
+
+##########################################
+### PRAGUE
+
+list_prague <- read.csv(file.path(folder, "list_prague.csv"), sep =";")
+
+list_prague$species <- iconv(list_prague$species, from = "", to = "UTF-8", sub = "byte")
+list_prague$family <- iconv(list_prague$family, from = "", to = "UTF-8", sub = "byte")
+
+pra_tax <- data.frame(
+  species = list_prague$species,
+  genus = sub(" .*", "", list_prague$species),               
+  family = sub(" .*", "", list_prague$family),
+  garden = "pr"
+)
+
+
+##########################################
+### LONDON KEW 
+
+list_kew1 <- read.csv(file.path(folder, "Kew_TropicalNursery_list.csv"), sep =";")
+list_kew2 <- read.csv(file.path(folder, "Kew_TemperateHouse_list.csv"), sep =";")
+
+
+list_kew <- rbind(list_kew1,list_kew2)
+
+
+lon_tax <- data.frame(
+  species = list_kew$TaxonomicName,
+  genus = list_kew$Genus,               
+  family = list_kew$Family,
+  garden = "lo"
 )

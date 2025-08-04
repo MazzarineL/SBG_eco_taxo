@@ -28,9 +28,22 @@ ui <- dashboardPage(
 sidebarMenu(
   div(class = "filters-section",
       menuItem("Filters", tabName = "filters", icon = icon("sliders"), selected = TRUE),
-      checkboxGroupInput(inputId = "Garden", label = "Select Garden",
-                         choices = c("Neuchâtel" = "ne", "Fribourg" = "fr", "Lausanne" = "la", "Geneva" = "ge","Champex" = "ch")),
-      actionButton(inputId = "action", label = "Go!", icon = icon("play"), style = "color: #fff; background-color: #222c32;")
+      
+      tags$h5("Swiss Botanical Gardens"),
+      checkboxGroupInput(inputId = "Garden", label = NULL,
+                         choices = c("Neuchâtel" = "ne", 
+                                     "Fribourg" = "fr", 
+                                     "Lausanne" = "la", 
+                                     "Geneva" = "ge", 
+                                     "Champex" = "ch")),
+      
+      tags$h5("International Botanical Gardens"),
+      checkboxGroupInput(inputId = "Garden_intl", label = NULL,
+                         choices = c("London" = "lo", 
+                                     "Prague" = "pr")),
+      
+      actionButton(inputId = "action", label = "Go!", icon = icon("play"),
+                   style = "color: #fff; background-color: #222c32;")
   ),
   
   menuItem("Phylogenetic", icon = icon("network-wired"),
@@ -271,7 +284,7 @@ tabItem(tabName = "plot_cover",
     )
   ),
   fluidRow(
-    plotOutput("vennplot", height = "800px")
+    plotOutput("vennplot", height = "850px")
   ),
   fluidRow(
   column(

@@ -5,15 +5,14 @@ library(RColorBrewer)
 library(scales)
 
 ### Genus ###
-
 # Number of unique categories (including NA if present)
-n_colors <- length(unique(garden_counts$code_garden))
+n_colors <- length(unique(taxonomy_merge$code_garden))
 
 # Custom palette (using hue_pal to generate n distinct colors)
 color_palette <- hue_pal()(n_colors)
 
 # If NA present → add grey for NA
-if (any(is.na(garden_counts$code_garden))) {
+if (any(is.na(taxonomy_merge$code_garden))) {
   color_palette <- c("grey80", color_palette)
 }
 

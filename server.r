@@ -1827,3 +1827,4 @@ output$progress_plot <- renderPlot({
 }
 
 
+shinyApp(ui = ui, server = server)
