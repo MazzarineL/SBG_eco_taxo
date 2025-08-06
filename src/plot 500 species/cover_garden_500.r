@@ -36,7 +36,6 @@ taxonomy_family_Garden <- rbind(fri_tax_G,neu_bota_G,lau_res_G,gen_res_G,cha_res
 taxonomy_family_Garden <- taxonomy_family_Garden %>%
   mutate(pres = 1)
 
-
 ######## Taxonomy complete des genre #####
 taxonomy_family_full = read.csv("D:/gitrepo/SBG_eco_taxo/data/taxonomy_family_genus.csv")
 
@@ -145,3 +144,113 @@ taxonomy_merge <- taxonomy_merge %>% dplyr::select(-family.y)
 write.csv(taxonomy_merge, "D:/gitrepo/SBG_eco_taxo/data/taxo_species_garden.csv", row.names = FALSE)
 
 
+result_lo <- taxonomy_merge %>%
+  filter(code_garden == "lo")
+fix(result_lo)
+
+unique(result_lo$family)
+
+
+
+
+
+
+
+
+
+#######    most wanted londre ##################################
+
+taxonomy_family_full = read.csv("D:/gitrepo/SBG_eco_taxo/data/taxonomy_family_genus.csv")
+
+taxonomy_family_full <- taxonomy_family_full %>% dplyr::rename(genus = name)
+taxonomy_family_full <- taxonomy_family_full %>% dplyr::rename(family = name.family)
+
+ 
+taxonomy_merge <-
+      left_join(taxonomy_family_full,
+        taxonomy_family_Garden,
+        by = c("genus"))
+
+
+
+taxonomy_merge$pres <- ifelse(is.na(taxonomy_merge$pres), 0, taxonomy_merge$pres)
+taxonomy_merge <- taxonomy_merge[!is.na(taxonomy_merge$family),]
+
+
+taxonomy_merge$code_garden <- NA
+select_taxo <- data.frame()
+unique_family <- unique(taxonomy_merge$family)
+
+for (family in unique_family) {
+  
+  select_taxo <- taxonomy_merge[taxonomy_merge$family == family, ]
+  
+  unique_gardens <- unique(select_taxo$garden)
+  
+  sorted_gardens <- sort(unique_gardens)
+  code_garden <- paste(sorted_gardens, collapse = "_")
+  
+  taxonomy_merge$code_garden[taxonomy_merge$family == family] <- code_garden
+}
+taxonomy_merge$code_garden[taxonomy_merge$code_garden == ""] <- NA
+
+
+result <- taxonomy_merge %>%
+  filter(code_garden == "lo")
+
+unique(result$family)
+
+species_list <- lon_tax %>%
+  filter(family %in% unique(result$family)) %>%
+  pull(species) %>%
+  unique()
+
+
+fix(species_list)
+
+
+
+result_genus <- taxonomy_merge %>%
+  filter(code_garden == "lo")
+
+fix(result_genus)
+unique(result_genus$genus)
+
+genus_list <- lon_tax %>%
+  filter(genus %in% unique(result_genus$genus)) %>%
+  pull(species) %>%
+  unique()
+
+list_family_londre <- data.frame(species_list)
+list_genus_londre <- data.frame(genus_list)
+
+
+write.csv(list_family_londre, "D:/gitrepo/SBG_eco_taxo/data/list_family_londre.csv", row.names = FALSE)
+write.csv(list_genus_londre, "D:/gitrepo/SBG_eco_taxo/data/list_genus_londre.csv", row.names = FALSE)
+
+colnames(list_family_londre)[1] <- "species"
+colnames(list_genus_londre)[1] <- "species"
+list_family_londre$target <- "family"
+list_genus_londre$target <- "genus"
+
+
+merged_list <- rbind(list_family_londre,list_genus_londre)
+
+# Résultat
+merged_list <- as.data.frame(merged_list)
+merged_list <- unique(merged_list)
+
+
+merged_final <- merge(
+  list_kew,
+  merged_list,
+  by.x = "Accepted.Name",
+  by.y = "species",
+  all = FALSE
+)
+fix(merged_final)
+
+write.csv(merged_final, "D:/gitrepo/SBG_eco_taxo/data/list_wanted_londre.csv", row.names = FALSE)
+length(unique(merged_final$Accepted.Name))
+length(unique(merged_final$Genus))
+length(unique(merged_final$Family))
