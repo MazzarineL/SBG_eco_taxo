@@ -24,7 +24,7 @@ species_multiple_gardens <- env_bota %>%
 
 # Filtrer les espèces du jardin "ch" qui sont uniques à ce jardin
 env_bota <- env_bota %>%
-  filter(garden == "ch", !species %in% species_multiple_gardens) %>%
+  filter(garden == "lo", !species %in% species_multiple_gardens) %>%
   select(species, genus)
 
 
@@ -103,4 +103,4 @@ for (i in 1:total_iterations) {
 df_loca_sauv <- df_loca
 
 # Enregistrer le dataframe en tant que fichier CSV
-write.csv(df_loca, "D:/gitrepo/SBG_eco_taxo/data/gift/data_env_gift_champex.csv", row.names = FALSE)
+write.csv(df_loca, "D:/gitrepo/SBG_eco_taxo/data/gift/data_env_gift_london.csv", row.names = FALSE)
