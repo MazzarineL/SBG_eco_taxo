@@ -17,6 +17,7 @@ whit_part1.8 <- whit_part1.8 %>% dplyr::select(-biome)
 
 whit_part1 <- rbind(whit_part1.1, whit_part1.2,whit_part1.3,whit_part1.4,whit_part1.5,whit_part1.6,whit_part1.7,whit_part1.8)  
 
+cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
 
 
     cover_whit <- cover_species_garden_full
@@ -55,5 +56,10 @@ whit_part1 <- rbind(whit_part1.1, whit_part1.2,whit_part1.3,whit_part1.4,whit_pa
 cover_whit <- cover_whit %>%
   distinct(species, .keep_all = TRUE)
 
+      data_clim <- merge(data_clim, cover_whit, by = "species")
+    data_clim <- data_clim %>% dplyr::mutate(temperature = ifelse(species %in% c("Drosera spathulata", "Duvalia modesta"), 25, temperature))
+    data_clim <- data_clim %>% filter(!is.na(temperature))
+    data_clim <- data_clim[!duplicated(data_clim$species), ]
 
-write.csv(cover_whit, "D:/gitrepo/SBG_eco_taxo/data/gift/data_env_gift_fusion.csv", row.names = FALSE)
+
+write.csv(data_clim, "D:/gitrepo/SBG_eco_taxo/data/gift/data_env_gift_fusion.csv", row.names = FALSE)

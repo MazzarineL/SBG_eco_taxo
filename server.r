@@ -85,6 +85,7 @@ whit_part1.8 <- whit_part1.8 %>% dplyr::select(-biome)
 whit_part1 <- rbind(whit_part1.1, whit_part1.2,whit_part1.3,whit_part1.4,whit_part1.5,whit_part1.6,whit_part1.7,whit_part1.8)  
 
 
+gift_fusion <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_fusion.csv"), sep = ",")
 
 # 1. Codes de base des jardins (à compléter selon ton jeu complet)
 base_gardens <- c("fr", "ne", "la", "ge", "ch", "lo", "pr")
@@ -884,7 +885,7 @@ observeEvent(input$action, {
     output$whitplot  <- NULL
     req(input$Garden != "")
 
-    cover_whit <- gift fusion
+    cover_whit <- gift_fusion
 
 
 if(length(input_code) == 1) {
@@ -902,19 +903,9 @@ if(length(input_code) == 1) {
 
 cover_whit <- cover_whit %>% distinct(species, .keep_all = TRUE)
 
-    cover_whit <- cover_whit %>% dplyr::distinct(species, .keep_all = TRUE)
-
-    incProgress(5/6, detail = "Merging climatic data...")
-    data_clim <- merge(data_clim, cover_whit, by = "species")
-
-    data_clim$jardin <- as.factor(data_clim$code_garden)
-    data_clim <- data_clim %>% dplyr::mutate(temperature = ifelse(species %in% c("Drosera spathulata", "Duvalia modesta"), 25, temperature))
-    data_clim <- data_clim %>% filter(!is.na(temperature))
-    data_clim <- data_clim[!duplicated(data_clim$species), ]
 
     data_clim_reactive(data_clim)
 
-    incProgress(6/6, detail = "Generating plot...")
     output$whitplot <- renderPlot({
       isolate({
         whit <- plotbiomes::whittaker_base_plot() +
@@ -1346,7 +1337,7 @@ cover_species <- cover_species %>%
    dplyr::left_join(cover_species_summary, by = c("species", "garden"))
 
 cover_species <- cover_species %>%
-  rename(pres = pres.x) %>%  # renomme pres.x en pres
+  rename(pres = pres.x) %>%  
   select(-pres.y)  
 
    cover_species <- cover_species %>%
