@@ -27,20 +27,31 @@ ui <- dashboardPage(
     ")),
 sidebarMenu(
   div(class = "filters-section",
+      
       menuItem("Filters", tabName = "filters", icon = icon("sliders"), selected = TRUE),
       
       tags$h5("Swiss Botanical Gardens"),
-      checkboxGroupInput(inputId = "Garden", label = NULL,
-                         choices = c("Neuchâtel" = "ne", 
-                                     "Fribourg" = "fr", 
-                                     "Lausanne" = "la", 
-                                     "Geneva" = "ge", 
-                                     "Champex" = "ch")),
+      checkboxGroupInput(
+        inputId = "Garden", 
+        label = NULL,
+        choices = c(
+          "Neuchâtel" = "ne", 
+          "Fribourg"  = "fr", 
+          "Lausanne"  = "la", 
+          "Geneva"    = "ge", 
+          "Champex"   = "ch"
+        )
+      ),
       
       tags$h5("International Botanical Gardens"),
-      checkboxGroupInput(inputId = "Garden_intl", label = NULL,
-                         choices = c("London" = "lo", 
-                                     "Prague" = "pr")),
+      checkboxGroupInput(
+        inputId = "Garden",  # même inputId que plus haut
+        label = NULL,
+        choices = c(
+          "Prague" = "pr",
+          "London" = "lo"
+        )
+      ),
       
       actionButton(inputId = "action", label = "Go!", icon = icon("play"),
                    style = "color: #fff; background-color: #222c32;")
@@ -49,7 +60,7 @@ sidebarMenu(
   menuItem("Phylogenetic", icon = icon("network-wired"),
            menuSubItem("Garden Tree", tabName = "garden_tree", icon = icon("tree")),
            menuSubItem("Family Tree", tabName = "family_tree", icon = icon("sitemap")),
-           menuSubItem("Phylogenetic Coverage", tabName = "plot_cover", icon = icon("project-diagram"))
+           menuSubItem("Taxonomic Coverage", tabName = "plot_cover", icon = icon("project-diagram"))
   ),
   
   menuItem("Biome", icon = icon("globe-americas"),
