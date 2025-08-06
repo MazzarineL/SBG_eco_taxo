@@ -82,37 +82,27 @@ whit_part1.6 <- whit_part1.6 %>% dplyr::select(-biome)
 
 whit_part1 <- rbind(whit_part1.1, whit_part1.2,whit_part1.3,whit_part1.4,whit_part1.5,whit_part1.6)  
 
-# Niveaux de garden codes mis à jour
-family_levels <- c(
-  "fr", "ne", "la", "ge", "ch",
-  "fr_ne", "fr_la", "fr_la_ne", "fr_ge", 
-  "fr_ge_la", "fr_ge_la_ne", "fr_ge_ne", 
-  "ge_la", "ge_la_ne", "ge_ne", "la_ne",
-  "ch_fr", "ch_fr_ne", "ch_fr_la", "ch_fr_ge", 
-  "ch_fr_ge_ne", "ch_fr_ge_la", "ch_fr_ge_la_ne", 
-  "ch_ge", "ch_ge_ne", "ch_ge_la", "ch_ge_la_ne", 
-  "ch_la", "ch_ne", 
-  "NA"
-)
-
-# Couleurs (ajoute/modifie selon préférences)
-color_values <- c(
-  "#E74C3C",  # fr
-  "#9B59B6",  # ne
-  "#3498DB",  # la
-  "#F39C12",  # ge
-  "#2ECC71",  # ch
-  "#8E44AD", "#D35400", "#E67E22", "#2980B9", "#1ABC9C",
-  "#2C3E50", "#C0392B", "#FF5733", "#F1C40F", "#16A085", "#A93226",
-  "#7D3C98", "#AF601A", "#2471A3", "#17A589", "#641E16",
-  "#D5A6BD", "#B9770E", "#196F3D", "#CA6F1E", "#7FB3D5",
-  "#FAD7A0", "#F5B7B1", "#A3E4D7", "#BDC3C7",
-  "#566573"   # ← Couleur ajoutée pour le 31e élément
-)
-names(color_values) <- family_levels
 
 
-# Fonction de labels mise à jour avec "ch" = Champex
+# 1. Codes de base des jardins (à compléter selon ton jeu complet)
+base_gardens <- c("fr", "ne", "la", "ge", "ch", "lo", "pr")
+
+# 2. Générer toutes les combinaisons possibles (1 à length(base_gardens))
+generate_combinations <- function(gardens) {
+  combis <- unlist(lapply(1:length(gardens), function(n) {
+    apply(combn(gardens, n), 2, function(x) paste(sort(x), collapse = "_"))
+  }))
+  c(combis, "NA")  # ajoute "NA"
+}
+family_levels <- generate_combinations(base_gardens)
+
+# 3. Générer palette de couleurs unique adaptée au nombre de combis
+n_colors <- length(family_levels)
+palette <- colorRampPalette(brewer.pal(8, "Set3"))(n_colors)
+color_values <- setNames(palette, family_levels)
+
+
+# Fonction de labels mise à jour 
 generate_labels <- function(family_levels) {
   labels <- sapply(family_levels, function(code) {
     locations <- c()
@@ -121,6 +111,8 @@ generate_labels <- function(family_levels) {
     if (grepl("la", code)) locations <- c(locations, "Lausanne")
     if (grepl("ne", code)) locations <- c(locations, "Neuchâtel")
     if (grepl("ch", code)) locations <- c(locations, "Champex")
+    if (grepl("lo", code)) locations <- c(locations, "London")
+    if (grepl("pr", code)) locations <- c(locations, "Prague")
 
     if (length(locations) > 0) {
       paste("Available in", paste(unique(locations), collapse = ", "))
@@ -135,34 +127,29 @@ generate_labels <- function(family_levels) {
 labels <- generate_labels(family_levels)
 
 # Mapping lisible pour les légendes
-replacement_mapping <- c(
-  "fr" = "Fribourg", "ne" = "Neuchâtel", "la" = "Lausanne", "ge" = "Geneva", "ch" = "Champex",
-  "fr_ne" = "Fribourg and Neuchâtel",
-  "fr_la" = "Fribourg and Lausanne",
-  "fr_la_ne" = "Fribourg, Lausanne, and Neuchâtel",
-  "fr_ge" = "Fribourg and Geneva",
-  "fr_ge_la" = "Fribourg, Geneva, and Lausanne",
-  "fr_ge_la_ne" = "Fribourg, Geneva, Lausanne, and Neuchâtel",
-  "fr_ge_ne" = "Fribourg, Geneva, and Neuchâtel",
-  "ge_la" = "Geneva and Lausanne",
-  "ge_la_ne" = "Geneva, Lausanne, and Neuchâtel",
-  "ge_ne" = "Geneva and Neuchâtel",
-  "la_ne" = "Lausanne and Neuchâtel",
-  "ch_fr" = "Champex and Fribourg",
-  "ch_fr_ne" = "Champex, Fribourg and Neuchâtel",
-  "ch_fr_la" = "Champex, Fribourg and Lausanne",
-  "ch_fr_ge" = "Champex, Fribourg and Geneva",
-  "ch_fr_ge_ne" = "Champex, Fribourg, Geneva and Neuchâtel",
-  "ch_fr_ge_la" = "Champex, Fribourg, Geneva and Lausanne",
-  "ch_fr_ge_la_ne" = "Champex, Fribourg, Geneva, Lausanne and Neuchâtel",
-  "ch_ge" = "Champex and Geneva",
-  "ch_ge_ne" = "Champex, Geneva and Neuchâtel",
-  "ch_ge_la" = "Champex, Geneva and Lausanne",
-  "ch_ge_la_ne" = "Champex, Geneva, Lausanne and Neuchâtel",
-  "ch_la" = "Champex and Lausanne",
-  "ch_ne" = "Champex and Neuchâtel",
-  "NA" = "Not available"
-)
+replacement_mapping <- function(family_levels) {
+  labels <- sapply(family_levels, function(code) {
+    locations <- c()
+    if (grepl("fr", code)) locations <- c(locations, "Fribourg")
+    if (grepl("ge", code)) locations <- c(locations, "Geneva")
+    if (grepl("la", code)) locations <- c(locations, "Lausanne")
+    if (grepl("ne", code)) locations <- c(locations, "Neuchâtel")
+    if (grepl("ch", code)) locations <- c(locations, "Champex")
+    if (grepl("lo", code)) locations <- c(locations, "London")
+    if (grepl("pr", code)) locations <- c(locations, "Prague")
+
+    if (length(locations) > 0) {
+      paste(paste(unique(locations), collapse = ", "))
+    } else {
+      "Not available"
+    }
+  })
+  names(labels) <- family_levels
+  return(labels)
+}
+
+replacement_mapping <- replacement_mapping(family_levels)
+
 
 #####################################
 #########PHYLO TREE GARDEN ##############
@@ -170,11 +157,11 @@ replacement_mapping <- c(
 observeEvent(input$action, {
   withProgress(message = 'Loading data...', value = 0, {
     output$treePlot <- NULL
-    req(input$Garden != "")
+req(length(input$Garden) > 0 || length(input$Garden_intl) > 0)
     
     # Initialize variables
     taxonomy_merge <- cover_genus_garden_full
-    input_code <-input$Garden
+    input_code <- c(input$Garden, input$Garden_intl)
     
     # Update progress
     incProgress(1/6, detail = "Processing garden codes...")
@@ -186,7 +173,7 @@ observeEvent(input$action, {
     } else {
       selected_values <- paste(input_code, collapse = "|")
       taxonomy_merge$code_garden[!grepl(selected_values, taxonomy_merge$code_garden)] <- NA
-      entire_codes <- c("fr", "ne", "la", "ge","ch")
+      entire_codes <- c("fr", "ne", "la", "ge","ch","lo","pr")
       diff <- setdiff(entire_codes, input_code)
       taxonomy_merge$code_garden <- gsub(paste(diff, collapse = "|"), "", taxonomy_merge$code_garden)
       taxonomy_merge$code_garden <- gsub("_+", "_", taxonomy_merge$code_garden)
@@ -254,7 +241,7 @@ observeEvent(input$action, {
 #####################################
 observeEvent(c(input$actionfamily, input$genus_select), {
   withProgress(message ='Loading data...', value = 0, {
-    req(input$Garden != "")
+req(length(input$Garden) > 0 || length(input$Garden_intl) > 0)
     
     family_test <- input$family
  output$onlygenus <- renderDT({ NULL })
@@ -263,7 +250,7 @@ output$FamilyPlot <- renderPlot({ NULL })
 output$textgenus <- renderText({ NULL })
     genus_cover <- NULL
     genus_select <- input$genus_select
-    input_code <- input$Garden
+    input_code <-  c(input$Garden, input$Garden_intl)
     cover_genus_garden <- cover_genus_garden_full
     
     # Nouvelle condition ajoutée
@@ -287,7 +274,7 @@ output$textgenus <- renderText({ NULL })
       } else {
         selected_values <- paste(input_code, collapse = "|")
         cover_genus_garden$code_garden[!grepl(selected_values, cover_genus_garden$code_garden)] <- NA
-        entier <- c("fr", "ne", "la","ge","ch")
+        entier <-c("fr", "ne", "la", "ge","ch","lo","pr")
         diff <- setdiff(entier, input_code)
         cover_genus_garden$code_garden <- gsub(paste(diff, collapse = "|"), "", cover_genus_garden$code_garden)
         cover_genus_garden$code_garden <- gsub("_+", "_", cover_genus_garden$code_garden)
@@ -640,13 +627,13 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
 #########BARPLOT COVER ##############
 #####################################
 observeEvent(input$action, {
-  req(input$Garden != "")
-  input_values <- unlist(strsplit(input$Garden, "_"))
+req(length(input$Garden) > 0 || length(input$Garden_intl) > 0)
+  input_values <- unlist(strsplit(c(input$Garden, input$Garden_intl), "_"))
 
   cover_plot <- cover_species_garden_full %>%
     dplyr::select(species, genus, family, code_garden)
 
-  valid_elements <- c("ne", "la", "fr", "ge", "ch")
+  valid_elements <- c("fr", "ne", "la", "ge","ch","lo","pr")
 
   filter_code <- function(code, input_values) {
     elements <- unlist(strsplit(code, "_"))
@@ -794,37 +781,7 @@ observeEvent(input$action, {
 #####################################
 ######### VENNPLOT ##############
 #####################################
-
-
-observeEvent(input$action, {
-  req(input$Garden != "")
-
-  cover_plot <- cover_species_garden_full
-  input_code <- input$Garden
-
-  # Nettoyage des NA
-  cover_plot <- cover_plot[!is.na(cover_plot$species) & 
-                             !is.na(cover_plot$garden) & 
-                             !is.na(cover_plot$genus) & 
-                             !is.na(cover_plot$family), ]
-
-  # Filtrer selon les jardins sélectionnés
-  filtered_data <- cover_plot[cover_plot$garden %in% input_code, ]
-
-  # Création des listes
-  list_of_species <- lapply(input_code, function(g) filtered_data$species[filtered_data$garden == g])
-  list_of_genus   <- lapply(input_code, function(g) filtered_data$genus[filtered_data$garden == g])
-  list_of_family  <- lapply(input_code, function(g) filtered_data$family[filtered_data$garden == g])
-
-  names(list_of_species) <- input_code
-  names(list_of_genus)   <- input_code
-  names(list_of_family)  <- input_code
-
-  # Labels + couleurs
-  labels_to_use <- replacement_mapping[input_code]
-  colors_to_use <- color_values[input_code]
-
-  display_venn <- function(x, labels, colors, title) {
+display_venn <- function(x, labels, colors, title) {
   old_wd <- getwd()
   tmp_dir <- tempdir()
   setwd(tmp_dir)
@@ -846,7 +803,7 @@ observeEvent(input$action, {
       cat.dist = rep(0.05, length(labels))
     )
     grid.draw(venn_obj)
-    grid.text(title, x = 0.3, y = 1.2, gp = gpar(fontsize = 12, fontface = "bold"))  # titre plus bas
+    grid.text(title, x = 0.3, y = 1.2, gp = gpar(fontsize = 12, fontface = "bold"))
     popViewport()
   })
 
@@ -854,9 +811,38 @@ observeEvent(input$action, {
   return(plot_grob)
 }
 
+observeEvent(input$action, {
+  req(length(input$Garden) > 0 || length(input$Garden_intl) > 0)
 
+  cover_plot <- cover_species_garden_full
 
-  # Générer les Venn diagrams
+  input_gardens <- c(input$Garden, input$Garden_intl)
+  input_gardens_sorted <- sort(unique(input_gardens))
+
+  # Nettoyage des NA
+  cover_plot <- cover_plot[!is.na(cover_plot$species) & 
+                             !is.na(cover_plot$garden) & 
+                             !is.na(cover_plot$genus) & 
+                             !is.na(cover_plot$family), ]
+
+  # Filtrer selon les jardins sélectionnés
+  filtered_data <- cover_plot[cover_plot$garden %in% input_gardens_sorted, ]
+
+  # Création des listes
+  list_of_species <- lapply(input_gardens_sorted, function(g) filtered_data$species[filtered_data$garden == g])
+  list_of_genus   <- lapply(input_gardens_sorted, function(g) filtered_data$genus[filtered_data$garden == g])
+  list_of_family  <- lapply(input_gardens_sorted, function(g) filtered_data$family[filtered_data$garden == g])
+
+  names(list_of_species) <- input_gardens_sorted
+  names(list_of_genus)   <- input_gardens_sorted
+  names(list_of_family)  <- input_gardens_sorted
+
+  # Pour labels et couleurs on prend la combinaison triée
+  combo_code <- paste(input_gardens_sorted, collapse = "_")
+  labels_to_use <- unname(strsplit(replacement_mapping[combo_code], ", ")[[1]])
+  colors_to_use <- unname(color_values[input_gardens_sorted])
+
+  # Afficher les Venn plots (les labels ici sont pour la légende)
   venn_species <- display_venn(list_of_species, labels_to_use, colors_to_use, "Species")
   venn_genus   <- display_venn(list_of_genus,   labels_to_use, colors_to_use, "Genus")
   venn_family  <- display_venn(list_of_family,  labels_to_use, colors_to_use, "Family")
@@ -868,12 +854,13 @@ observeEvent(input$action, {
     grid.draw(legend_grob)
   })
 
-  # Affichage dans l'app Shiny avec légende à droite
-output$vennplot <- renderPlot({
-  plots_col1 <- arrangeGrob(venn_species, venn_genus, venn_family, ncol = 1, heights = c(1,1,1))
-  final_plot <- arrangeGrob(plots_col1, legend_plot, ncol = 2, widths = c(3, 1))
-  grid.draw(final_plot)
-})
+  # Affichage dans l'app Shiny
+  output$vennplot <- renderPlot({
+    plots_col1 <- arrangeGrob(venn_species, venn_genus, venn_family, ncol = 1, heights = c(1,1,1))
+    final_plot <- arrangeGrob(plots_col1, legend_plot, ncol = 2, widths = c(3, 1))
+    grid.draw(final_plot)
+  })
+
 
   # Téléchargement
   output$dlvenplot <- downloadHandler(
@@ -895,9 +882,9 @@ observeEvent(input$action, {
   withProgress(message = 'Processing...', value = 0, {
     
     output$whitplot  <- NULL
-    req(input$Garden != "")
+req(length(input$Garden) > 0 || length(input$Garden_intl) > 0)
     cover_whit <- cover_species_garden_full
-    input_code <- input$Garden
+    input_code <- c(input$Garden, input$Garden_intl)
     
     incProgress(1/6, detail = "Converting data types...")
     whit_part1$mean_wc2.0_bio_30s_12 <- as.numeric(whit_part1$mean_wc2.0_bio_30s_12)
