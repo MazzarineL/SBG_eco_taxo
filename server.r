@@ -1,6 +1,6 @@
 #install.packages(c("shiny", "rsconnect", "ggplot2", "dplyr", "ggtree", "rotl", 
 #                   "slider", "gt", "plotbiomes", "rgbif", "sp", "Polychrome",
-#                   "rinat", "RColorBrewer", "curl", "maps", "ggvenn","VennDiagram","gridExtra","BiocManager","devtools"))
+#                   "rinat", "RColorBrewer", "curl", "maps", "ggvenn","VennDiagram","gridExtra","BiocManager","devtools","UpSetR"))
 
 library(DT)
 library(BiocManager) 
@@ -38,6 +38,8 @@ library(stringr)
 library(ggspatial)
 library(tibble)
 library(tidyr) 
+library(colorspace)
+
 
 clean_family <- function(fam_vec) {
   fam_vec <- trimws(fam_vec) # enlève espaces autour
@@ -66,25 +68,6 @@ observe({
   )
 })
 
-whit_part1.1 <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part1.csv"), sep = ";")
-whit_part1.2 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part2.csv"), sep = ";")
-whit_part1.3 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part3.csv"), sep = ";")
-whit_part1.4 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part1.4.csv"), sep = ",")
-whit_part2 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_part4.csv"), sep = ";")
-whit_part1.5 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_geneve.csv"), sep = ",")
-whit_part1.6 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_champex.csv"), sep = ",")
-whit_part1.7 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_prague.csv"), sep = ",")
-whit_part1.8 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_london.csv"), sep = ",")
-
-whit_part1.4 <- whit_part1.4 %>% dplyr::select(-biome)
-whit_part1.5 <- whit_part1.5 %>% dplyr::select(-biome)
-whit_part1.6 <- whit_part1.6 %>% dplyr::select(-biome)
-whit_part1.7 <- whit_part1.7 %>% dplyr::select(-biome)
-whit_part1.8 <- whit_part1.8 %>% dplyr::select(-biome)
-
-whit_part1 <- rbind(whit_part1.1, whit_part1.2,whit_part1.3,whit_part1.4,whit_part1.5,whit_part1.6,whit_part1.7,whit_part1.8)  
-
-
 gift_fusion <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_fusion.csv"), sep = ",")
 
 # 1. Codes de base des jardins (à compléter selon ton jeu complet)
@@ -100,9 +83,36 @@ generate_combinations <- function(gardens) {
 family_levels <- generate_combinations(base_gardens)
 
 # 3. Générer palette de couleurs unique adaptée au nombre de combis
+# Tous les niveaux à colorier
 n_colors <- length(family_levels)
-palette <- colorRampPalette(brewer.pal(8, "Set3"))(n_colors)
-color_values <- setNames(palette, family_levels)
+
+# Couleur grise pour NA
+color_values <- rep(NA, n_colors)
+names(color_values) <- family_levels
+color_values[is.na(names(color_values))] <- "grey"
+color_values["NA"] <- "grey"
+# Couleurs très distinctes pour les jardins spécifiques
+distinct_colors <- qualitative_hcl(length(base_gardens), palette = "Dark 3")
+names(distinct_colors) <- base_gardens
+
+# Appliquer les couleurs distinctes aux jardins uniques
+color_values[names(color_values) %in% base_gardens] <- distinct_colors[names(color_values)[names(color_values) %in% base_gardens]]
+
+# Pour les autres combinaisons, générer des teintes variées (HSV) excluant les déjà assignées
+remaining_labels <- setdiff(family_levels, c(names(color_values)[!is.na(color_values)]))
+
+# Génération de couleurs variées par HSV
+remaining_n <- length(remaining_labels)
+if (remaining_n > 0) {
+  hsv_colors <- grDevices::hsv(
+    h = seq(0, 1, length.out = remaining_n + 1)[-1],   # Teintes réparties
+    s = runif(remaining_n, 0.6, 1),                    # Saturation aléatoire élevée
+    v = runif(remaining_n, 0.7, 1)                     # Valeur aléatoire élevée
+  )
+  names(hsv_colors) <- remaining_labels
+  color_values[remaining_labels] <- hsv_colors
+}
+
 
 
 # Fonction de labels mise à jour 
@@ -167,7 +177,7 @@ observeEvent(input$action, {
     input_code <-input$Garden    
 
     # Update progress
-    incProgress(1/6, detail = "Processing garden codes...")
+    incProgress(1/5, detail = "Processing garden codes...")
     
     # If only one option is selected
     if (length(input_code) == 1) {
@@ -191,7 +201,7 @@ observeEvent(input$action, {
     
     taxonomy_merge <- taxonomy_merge[!is.na(taxonomy_merge$ott_id.family), ]
     
-    incProgress(3/6, detail = "Generating phylogenetic tree...")
+    incProgress(3/5, detail = "Generating phylogenetic tree...")
  
     my_tree <- rotl::tol_induced_subtree(ott_ids = taxonomy_merge$ott_id.family)
     sp_name <- gsub("_.*", "", my_tree$tip.label)
@@ -199,7 +209,7 @@ observeEvent(input$action, {
     family <- taxonomy_merge$family
     g <- split(family, taxonomy_merge$code_garden)
     
-    incProgress(4/6, detail = "Creating plot...")
+    incProgress(4/5, detail = "Creating plot...")
     
     output$treePlot <- renderPlot({
       isolate({
@@ -233,7 +243,7 @@ observeEvent(input$action, {
       })
     })
     
-    incProgress(5/6, detail = "Finalizing...")
+    incProgress(5/5, detail = "Finalizing...")
   })
 })
 
@@ -552,7 +562,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
       # Directly go to split by 'pres' for plot coloring
       # Split par pres pour la couleur dans le plot
       
-      incProgress(4/6, detail = "Preparing the table...")
+      incProgress(1/3, detail = "Preparing the table...")
       
       output$mytable <- gt::render_gt({
         df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% select(genus)
@@ -579,7 +589,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
         }
       )
       
-      incProgress(5/6, detail = "Preparing family tree...")
+      incProgress(2/3, detail = "Preparing family tree...")
       
       output$FamilyPlot <- renderPlot({
         isolate({
@@ -608,7 +618,8 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
             )
           
           print(tree_family)
-          
+              incProgress(3/3, detail = "Finalizing...")
+
           output$downloadFamilyPlot <- downloadHandler(
             filename = function() {
               paste0("Tree_plot_", family_test, ".pdf")
@@ -619,8 +630,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
           )
         })
       })
-      
-      incProgress(6/6, detail = "Finalizing...")
+    
     }
     
   })
@@ -631,6 +641,8 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
 #####################################
 observeEvent(input$action, {
   req(input$Garden != "")
+ 
+ withProgress(message ='Loading data...', value = 0, {
 
   input_values <-input$Garden
 
@@ -638,6 +650,8 @@ observeEvent(input$action, {
     dplyr::select(species, genus, family, garden)
 
   valid_elements <- c("fr", "ne", "la", "ge","ch","pr","lo")
+  
+   incProgress(1/3, detail = "Functions...")
 
   filter_code <- function(code, input_values) {
     elements <- unlist(strsplit(code, "_"))
@@ -686,7 +700,8 @@ recompose_code <- function(codes) {
       stringsAsFactors = FALSE
     )
   }
-
+ 
+ incProgress(2/3, detail = "Preparation data...") 
   # Traitement centralisé
   cover_plot$garden <- sapply(cover_plot$garden, filter_code, input_values = input_values)
   cover_plot <- dplyr::filter(cover_plot, garden != "NA")
@@ -706,7 +721,9 @@ recompose_code <- function(codes) {
   )
 
 table_full$garden <- factor(table_full$garden, levels = union(family_levels, unique(table_full$garden)))
+table_full$garden <- factor(table_full$garden, levels = names(color_values))
 
+  incProgress(3/3, detail = "Finalizing...")
   # BARPLOT
   output$coverplot <- renderPlot({
     ggplot(table_full, aes(x = type, y = count, fill = garden)) +
@@ -716,7 +733,7 @@ table_full$garden <- factor(table_full$garden, levels = union(family_levels, uni
       theme_minimal() +
       facet_wrap(~type, scales = "free") +
       scale_fill_manual(
-        values = color_values[names(color_values) %in% table_full$garden],
+        values = color_values,
         labels = replacement_mapping[names(color_values) %in% table_full$garden],
         breaks = names(color_values)[names(color_values) %in% table_full$garden]
       ) +
@@ -735,7 +752,7 @@ table_full$garden <- factor(table_full$garden, levels = union(family_levels, uni
       labs(title = "Taxonomic Coverage per Garden Combination",
            fill = "Garden") +
       scale_fill_manual(
-        values = color_values[names(color_values) %in% table_full$garden],
+        values = color_values,
         labels = replacement_mapping[names(color_values) %in% table_full$garden],
         breaks = names(color_values)[names(color_values) %in% table_full$garden]
       ) +
@@ -775,7 +792,7 @@ table_full$garden <- factor(table_full$garden, levels = union(family_levels, uni
     }
   )
 })
-
+ })
 
 
 
@@ -884,7 +901,7 @@ observeEvent(input$action, {
     
     output$whitplot  <- NULL
     req(input$Garden != "")
-
+    input_code <-input$Garden
     cover_whit <- gift_fusion
 
 
@@ -904,12 +921,12 @@ if(length(input_code) == 1) {
 cover_whit <- cover_whit %>% distinct(species, .keep_all = TRUE)
 
 
-    data_clim_reactive(data_clim)
+    data_clim_reactive(cover_whit)
 
     output$whitplot <- renderPlot({
       isolate({
         whit <- plotbiomes::whittaker_base_plot() +
-          geom_point(data = data_clim, 
+          geom_point(data = cover_whit, 
                      aes(x = temperature, 
                          y = precipitation,
                          color = code_garden),  
@@ -956,8 +973,8 @@ output$whitplotFamily <- renderPlot({
 isolate({
 
 family_test <- input$family
-data_clim <- data_clim_reactive()
-data_clim_sub <- subset(data_clim, family == family_test)
+cover_whit <- data_clim_reactive()
+data_clim_sub <- subset(cover_whit, family == family_test)
 
 
 data_clim_sub <- data_clim_sub %>%
@@ -1004,7 +1021,7 @@ output$whitplotFamilyKernel <- renderPlot({
 isolate({
 
 family_test <- input$family
-data_clim_sub <- subset(data_clim, family == family_test)
+data_clim_sub <- subset(cover_whit, family == family_test)
 
 data_clim_sub <- data_clim_sub %>%
   filter(!is.na(temperature) & !is.na(precipitation) & 
@@ -1059,7 +1076,7 @@ whitfamilyKernel <- plotbiomes::whittaker_base_plot() +
 output$whitplotSelect <- renderPlotly({
   isolate({
     family_test <- input$family
-    data_clim_sub <- subset(data_clim, family == family_test)
+    data_clim_sub <- subset(cover_whit, family == family_test)
 
    data_clim_sub <- data_clim_sub %>%
          filter(!is.na(temperature) & !is.na(precipitation) & 
