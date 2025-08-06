@@ -53,7 +53,7 @@ world <- map_data("world")
 
 cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_genus_garden.csv") )
 cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
-unique(cover_species_garden_full$code_garden)
+all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/all_species_taxonomy_full.csv"), sep = ",")
 
 observe({
   cleaned_families <- sort(unique(clean_family(cover_species_garden_full$family)))
@@ -75,8 +75,6 @@ whit_part1.5 <-  read.csv(curl::curl("https://raw.githubusercontent.com/Mazzarin
 whit_part1.6 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_champex.csv"), sep = ",")
 whit_part1.7 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_prague.csv"), sep = ",")
 whit_part1.8 <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/gift/data_env_gift_london.csv"), sep = ",")
-
-all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/all_species_taxonomy_full.csv"), sep = ",")
 
 whit_part1.4 <- whit_part1.4 %>% dplyr::select(-biome)
 whit_part1.5 <- whit_part1.5 %>% dplyr::select(-biome)
@@ -886,43 +884,7 @@ observeEvent(input$action, {
     output$whitplot  <- NULL
     req(input$Garden != "")
 
-    cover_whit <- cover_species_garden_full
-    input_code <- input$Garden
-    
-    incProgress(1/6, detail = "Converting data types...")
-    whit_part1$mean_wc2.0_bio_30s_12 <- as.numeric(whit_part1$mean_wc2.0_bio_30s_12)
-    whit_part1$mean_wc2.0_bio_30s_01 <- as.numeric(whit_part1$mean_wc2.0_bio_30s_01)
-
-    whit_part1 <- whit_part1 %>%
-        dplyr::select(species, where(is.numeric)) %>%
-        dplyr::group_by(species) %>%
-        dplyr::summarise_all(mean, na.rm = TRUE)
-
-    whit_part2 <- whit_part2[!duplicated(whit_part2$species), ]
-    data_env_select <- whit_part1[, c(1,4,5)]
-    mean_df_select <- whit_part2[, c(1,4, 5)]
-
-    incProgress(2/6, detail = "Merging datasets...")
-    colnames(data_env_select) <- c("species","temperature", "precipitation")
-    colnames(mean_df_select) <- c("species", "temperature", "precipitation")
-    mean_df_select$temperature <- mean_df_select$temperature / 10
-    data_clim <- rbind(mean_df_select, data_env_select)  
-    data_clim$precipitation <- as.numeric(data_clim$precipitation)
-    data_clim$temperature <- as.numeric(data_clim$temperature)
-    data_clim$species <- as.factor(data_clim$species)
-    data_clim$precipitation <- data_clim$precipitation / 10
-
-    incProgress(3/6, detail = "Preparing garden codes...(This might take a minute, please be patient.)")
-    unique_species <- unique(cover_whit$species)
-    for (species in unique_species) {
-      select_taxo <- cover_whit[cover_whit$species == species, ]
-      unique_gardens <- unique(select_taxo$garden)
-      sorted_gardens <- sort(unique_gardens)
-      code_garden <- paste(sorted_gardens, collapse = "_")
-      cover_whit$code_garden[cover_whit$species == species] <- code_garden
-    }
-
-    incProgress(4/6, detail = "Filtering data based on input...")
+    cover_whit <- gift fusion
 
 
 if(length(input_code) == 1) {
@@ -1365,6 +1327,7 @@ output$downloaddistrib <- downloadHandler(
 #####################################
 #########SPECIES SELECT ##############
 #####################################
+
 cover_species <- cover_species_garden_full
 all_species <- all_species_taxo
 
@@ -1382,6 +1345,9 @@ cover_species <- cover_species %>%
    dplyr::distinct(species, garden, .keep_all = TRUE) %>%
    dplyr::left_join(cover_species_summary, by = c("species", "garden"))
 
+cover_species <- cover_species %>%
+  rename(pres = pres.x) %>%  # renomme pres.x en pres
+  select(-pres.y)  
 
    cover_species <- cover_species %>%
    dplyr::select(species, genus, family, garden, pres)
