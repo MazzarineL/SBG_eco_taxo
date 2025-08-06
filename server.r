@@ -53,7 +53,7 @@ world <- map_data("world")
 
 cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_genus_garden.csv") )
 cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
-
+unique(cover_species_garden_full$code_garden)
 
 observe({
   cleaned_families <- sort(unique(clean_family(cover_species_garden_full$family)))

@@ -104,14 +104,6 @@ write.csv(taxonomy_complete_Garden, "D:/gitrepo/SBG_eco_taxo/data/cover_species_
 
 
 
-
-
-
-
-################          bon   jsplus comment faire on va voir si c'est vraiment utile si l'app tourne sans cette partie a supprimer              ###########################################
-
-### ajout de londre et prague sans l'avoir utiliser si l'app marche ca vire #####
-
 ######## Taxonomy complete des especes #####
 taxonomy_family_full = read.csv("D:/gitrepo/SBG_eco_taxo/data/taxonomy_family_genus.csv")
 
@@ -125,9 +117,10 @@ taxonomy_merge <-
         by = c("genus"))
 
 
+taxonomy_merge$pres <- 1 
 
-taxonomy_merge$pres <- ifelse(is.na(taxonomy_merge$pres), 0, taxonomy_merge$pres)
-taxonomy_merge <- taxonomy_merge[!is.na(taxonomy_merge$family.y),]
+taxonomy_merge <- taxonomy_merge %>%
+  mutate(pres = ifelse(is.na(garden), 0, pres))
 
 
 taxonomy_merge$code_garden <- NA
