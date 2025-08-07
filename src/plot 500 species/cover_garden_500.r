@@ -206,7 +206,7 @@ cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.co
 cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
 all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/all_species_taxonomy_full.csv"), sep = ",")
 
-all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main//data/botanical_garden_list/list_geneva.csv"), sep = ",")
+list_geneve <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_geneva.csv"), sep = ",")
 
 /data/botanical_garden_list/list_geneva
 #LONDON
