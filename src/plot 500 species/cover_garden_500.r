@@ -146,12 +146,6 @@ taxonomy_merge <- taxonomy_merge %>% dplyr::select(-family.y)
 write.csv(taxonomy_merge, "D:/gitrepo/SBG_eco_taxo/data/taxo_species_garden.csv", row.names = FALSE)
 
 
-result_lo <- taxonomy_merge %>%
-  filter(code_garden == "lo")
-fix(result_lo)
-
-unique(result_lo$family)
-
 
 
 

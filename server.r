@@ -61,6 +61,7 @@ all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/Mazz
 list_geneve <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_geneva.csv"), sep = ";")
 list_london <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_london.csv"), sep = ",")
 list_lausanne <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_lausanne.csv"), sep = ";")
+list_prague <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_prague.csv"), sep = ";")
 
 
 observe({
@@ -1804,6 +1805,15 @@ output$progress_plot <- renderPlot({
 
   ### ---------- GENEVA ----------
   data_geneva <- reactive({
+
+    
+gen_tax <- data.frame(
+  species = paste(list_geneve$genre, list_geneve$espece),
+  genus = list_geneve$genre,
+  family = list_geneve$famille,
+  garden = "ge"
+)
+
     list_geneve$species <- paste(list_geneve$genre, list_geneve$espece)
     
     result <- cover_family_garden_full %>% filter(code_garden == "ge")
@@ -1844,6 +1854,18 @@ output$progress_plot <- renderPlot({
 
   ### ---------- PRAGUE ----------
   data_prague <- reactive({
+
+list_prague$species <- iconv(list_prague$species, from = "", to = "UTF-8", sub = "byte")
+list_prague$family <- iconv(list_prague$family, from = "", to = "UTF-8", sub = "byte")
+
+pra_tax <- data.frame(
+  species = list_prague$species,
+  genus = sub(" .*", "", list_prague$species),               
+  family = sub(" .*", "", list_prague$family),
+  garden = "pr"
+)
+
+
     result <- cover_family_garden_full %>% filter(code_garden == "pr")
     species_list <- cover_species_garden_full %>%
       filter(family %in% unique(result$family)) %>%
@@ -1877,6 +1899,13 @@ output$progress_plot <- renderPlot({
 
   ### ---------- LONDON ----------
   data_london <- reactive({
+    lon_tax <- data.frame(
+  species = list_london$TaxonomicName,
+  genus = list_london$Genus,               
+  family = list_london$Family,
+  garden = "lo"
+)
+
     result <- cover_family_garden_full %>% filter(code_garden == "lo")
     species_list <- cover_species_garden_full %>%
       filter(family %in% unique(result$family)) %>%

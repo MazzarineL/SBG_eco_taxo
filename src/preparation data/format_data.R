@@ -86,17 +86,21 @@ fri_tax <- list_fri %>%
 ##########################################
 ### LAUSANNE
 
-list_lau <- read_excel(file.path(folder, "list_lausanne.xlsx"))
+list_lau <- read.csv(file.path(folder, "list_lausanne.csv"), sep =";")
 
+# 2. Nettoyer les noms de taxons
 lau_inv_subset <- list_lau %>%
   select(Taxons) %>%
+  filter(!is.na(Taxons), Taxons != "") %>%
+  distinct() %>%
+  mutate(
+    Taxons = iconv(Taxons, to = "ASCII//TRANSLIT"),  
+    Taxons = trimws(Taxons)                         
+  ) %>%
   mutate(Index = row_number()) %>%
-  distinct(Taxons, .keep_all = TRUE) %>%
-  na.omit()
+  select(Index, Taxons)
 
-  lau_inv_subset <- lau_inv_subset %>% select(Index, Taxons)
-
-
+# 3. Résolution via TNRS
 lau_resolved <- TNRS(
   lau_inv_subset,
   sources = c("wcvp", "wfo"),
@@ -105,6 +109,7 @@ lau_resolved <- TNRS(
   matches = "best"
 )
 
+
 lau_tax <- data.frame(
   species = lau_resolved$Name_matched,
   genus = lau_resolved$Genus_matched,
@@ -112,10 +117,19 @@ lau_tax <- data.frame(
   garden = "la"
 )
 
+# Fusion avec left_join sur Taxons = Name_matched
+#list_lau <- list_lau %>%
+#  left_join(
+#    lau_tax %>% select(species, genus, family),
+#    by = c("Taxons" = "species")
+#  ) 
+
+#write.csv(list_lau, "D:/gitrepo/SBG_eco_taxo/data/botanical_garden_list/list_lausanne.csv", row.names = FALSE)
+
 ##########################################
 ### GENÈVE
 
-list_geneve <- read_excel(file.path(folder, "list_geneva.xlsx"))
+list_geneve <- read.csv(file.path(folder, "list_geneva.csv"), sep =";")
 
 gen_tax <- data.frame(
   species = paste(list_geneve$genre, list_geneve$espece),
