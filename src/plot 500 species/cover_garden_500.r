@@ -35,6 +35,8 @@ lon_res_G <- lon_tax %>%
 taxonomy_family_Garden <- rbind(fri_tax_G,neu_bota_G,lau_res_G,gen_res_G,cha_res_G,pra_res_G,lon_res_G)
 taxonomy_family_Garden <- taxonomy_family_Garden %>%
   mutate(pres = 1)
+#uniquement si derniere ligne vide
+#taxonomy_family_Garden <- taxonomy_family_Garden[-nrow(taxonomy_family_Garden), ]
 
 ######## Taxonomy complete des genre #####
 taxonomy_family_full = read.csv("D:/gitrepo/SBG_eco_taxo/data/taxonomy_family_genus.csv")
@@ -158,8 +160,7 @@ unique(result_lo$family)
 
 
 
-#######    most wanted londre ##################################
-
+#######    family coverage ##################################
 taxonomy_family_full = read.csv("D:/gitrepo/SBG_eco_taxo/data/taxonomy_family_genus.csv")
 
 taxonomy_family_full <- taxonomy_family_full %>% dplyr::rename(genus = name)
@@ -195,22 +196,31 @@ for (family in unique_family) {
 taxonomy_merge$code_garden[taxonomy_merge$code_garden == ""] <- NA
 
 
-result <- taxonomy_merge %>%
+write.csv(taxonomy_merge, "D:/gitrepo/SBG_eco_taxo/data/taxo_family_garden.csv", row.names = FALSE)
+
+
+
+
+cover_family_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_family_garden.csv") )
+cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_genus_garden.csv") )
+cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
+all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/all_species_taxonomy_full.csv"), sep = ",")
+
+
+result <- cover_family_garden_full %>%
   filter(code_garden == "lo")
 
-unique(result$family)
-
-species_list <- lon_tax %>%
+species_list <- cover_species_garden_full %>%
   filter(family %in% unique(result$family)) %>%
   pull(species) %>%
   unique()
 
 
-fix(species_list)
 
 
 
-result_genus <- taxonomy_merge %>%
+
+result_genus <- cover_genus_garden_full %>%
   filter(code_garden == "lo")
 
 fix(result_genus)
@@ -225,8 +235,6 @@ list_family_londre <- data.frame(species_list)
 list_genus_londre <- data.frame(genus_list)
 
 
-write.csv(list_family_londre, "D:/gitrepo/SBG_eco_taxo/data/list_family_londre.csv", row.names = FALSE)
-write.csv(list_genus_londre, "D:/gitrepo/SBG_eco_taxo/data/list_genus_londre.csv", row.names = FALSE)
 
 colnames(list_family_londre)[1] <- "species"
 colnames(list_genus_londre)[1] <- "species"
@@ -248,9 +256,13 @@ merged_final <- merge(
   by.y = "species",
   all = FALSE
 )
-fix(merged_final)
 
-write.csv(merged_final, "D:/gitrepo/SBG_eco_taxo/data/list_wanted_londre.csv", row.names = FALSE)
-length(unique(merged_final$Accepted.Name))
-length(unique(merged_final$Genus))
-length(unique(merged_final$Family))
+
+merged_final <- merged_final %>%
+  group_by(Catalogue.Number) %>%
+  filter(!(n() > 1 & target == "genus")) %>%
+  ungroup()
+  
+
+
+write.csv(merged_final, "D:/gitrepo/SBG_eco_taxo/data/list_wanted_london.csv", row.names = FALSE)
