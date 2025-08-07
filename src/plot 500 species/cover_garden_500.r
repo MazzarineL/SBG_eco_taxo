@@ -206,9 +206,9 @@ cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.co
 cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
 all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/all_species_taxonomy_full.csv"), sep = ",")
 
-list_geneve <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_geneva.csv"), sep = ",")
+list_geneve <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_geneva.csv"), sep = ";")
+list_london <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_london.csv"), sep = ";")
 
-/data/botanical_garden_list/list_geneva
 #LONDON
 result <- cover_family_garden_full %>%
   filter(code_garden == "lo")
@@ -322,9 +322,8 @@ merged_geneva <- unique(merged_geneva)
 
 
 
-list_geneve <- data.frame(
-  species = paste(list_geneve$genre, list_geneve$espece)
-)
+list_geneve$species <- paste(list_geneve$genre, list_geneve$espece)
+
 
 final_geneve <- merge(
   list_geneve,
@@ -333,9 +332,60 @@ final_geneve <- merge(
   by.y = "species",
   all = FALSE
 )
-
 final_geneve <- final_geneve %>%
-  group_by(Code ipen) %>%
+  group_by(Code.ipen) %>%
   filter(!(n() > 1 & target == "genus")) %>%
   ungroup()
-colnames(final_geneve)
+
+
+
+
+
+
+#LAUSANNE
+result <- cover_family_garden_full %>%
+  filter(code_garden == "ge")
+
+species_list <- cover_species_garden_full %>%
+  filter(family %in% unique(result$family)) %>%
+  pull(species) %>%
+  unique()
+
+result_genus <- cover_genus_garden_full %>%
+  filter(code_garden == "ge")
+
+genus_list <- gen_tax %>%
+  filter(genus %in% unique(result_genus$genus)) %>%
+  pull(species) %>%
+  unique()
+
+list_family_geneva <- data.frame(species_list)
+list_genus_geneva <- data.frame(genus_list)
+
+colnames(list_family_geneva)[1] <- "species"
+colnames(list_genus_geneva)[1] <- "species"
+list_family_geneva$target <- "family"
+list_genus_geneva$target <- "genus"
+
+merged_geneva <- rbind(list_family_geneva,list_genus_geneva)
+
+# Résultat
+merged_geneva <- as.data.frame(merged_geneva)
+merged_geneva <- unique(merged_geneva)
+
+
+
+list_geneve$species <- paste(list_geneve$genre, list_geneve$espece)
+
+
+final_geneve <- merge(
+  list_geneve,
+  merged_geneva,
+  by.x = "species",
+  by.y = "species",
+  all = FALSE
+)
+final_geneve <- final_geneve %>%
+  group_by(Code.ipen) %>%
+  filter(!(n() > 1 & target == "genus")) %>%
+  ungroup()
