@@ -76,7 +76,8 @@ sidebarMenu(
   menuItem("DBGI", icon = icon("database"),
            menuSubItem("Data Frame", tabName = "data_frame", icon = icon("table")),
            menuSubItem("Botanical Garden Map", tabName = "bot_map", icon = icon("map-location-dot")),
-           menuSubItem("Sampling", tabName = "sample", icon = icon("flask"))
+           menuSubItem("Sampling", tabName = "sample", icon = icon("flask")),
+           menuSubItem("Most Wanted", tabName = "most_wanted", icon = icon("exclamation-circle"))
   )
 )
   ),
@@ -456,9 +457,51 @@ tabItem(tabName = "sample",
   fluidRow(
     plotOutput("progress_plot", height = "600px")
   )
+),
+
+tabItem(tabName = "most_wanted",
+  tags$h1("Most wanted"),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      helpText("List of plants to collect in the Lausanne Botanical Garden."),
+      DT::dataTableOutput("table_mw_lausanne"),
+      div(style = "text-align: right; margin-top: 10px;",
+          downloadButton("download_table_mw_lausanne", "Download Lausanne most wanted list", class = "btn btn-primary")
+      )
+    )
+  ),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      helpText("List of plants to collect in the Geneva Botanical Garden."),
+      DT::dataTableOutput("table_mw_geneva"),
+      div(style = "text-align: right; margin-top: 10px;",
+          downloadButton("download_table_mw_Geneva", "Download Geneva most wanted list", class = "btn btn-primary")
+      )
+    )
+  ),
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      helpText("List of plants to collect in the Prague Botanical Garden."),
+      DT::dataTableOutput("table_mw_prague"),
+      div(style = "text-align: right; margin-top: 10px;",
+          downloadButton("download_table_mw_Prague", "Download Prague most wanted list", class = "btn btn-primary")
+      )
+    )
+  ),
+    fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      helpText("List of plants to collect in the London Botanical Garden."),
+      DT::dataTableOutput("table_mw_london"),
+      div(style = "text-align: right; margin-top: 10px;",
+          downloadButton("download_table_mw_London", "Download London most wanted list", class = "btn btn-primary")
+      )
+    )
+  )
 )
-
-
 
   ))
 )
