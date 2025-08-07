@@ -464,16 +464,6 @@ tabItem(tabName = "most_wanted",
   fluidRow(
     box(
       width = 12, status = "primary", solidHeader = TRUE,
-      helpText("List of plants to collect in the Lausanne Botanical Garden."),
-      DT::dataTableOutput("table_mw_lausanne"),
-      div(style = "text-align: right; margin-top: 10px;",
-          downloadButton("download_table_mw_lausanne", "Download Lausanne most wanted list", class = "btn btn-primary")
-      )
-    )
-  ),
-  fluidRow(
-    box(
-      width = 12, status = "primary", solidHeader = TRUE,
       helpText("List of plants to collect in the Geneva Botanical Garden."),
       DT::dataTableOutput("table_mw_geneva"),
       div(style = "text-align: right; margin-top: 10px;",

@@ -53,9 +53,15 @@ server <- function(input, output, session) {
 
 world <- map_data("world")
 
+cover_family_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_family_garden.csv") )
 cover_genus_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_genus_garden.csv") )
 cover_species_garden_full <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/taxo_species_garden.csv") )
 all_species_taxo <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/all_species_taxonomy_full.csv"), sep = ",")
+
+list_geneve <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_geneva.csv"), sep = ";")
+list_london <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_london.csv"), sep = ",")
+list_lausanne <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_lausanne.csv"), sep = ";")
+
 
 observe({
   cleaned_families <- sort(unique(clean_family(cover_species_garden_full$family)))
@@ -1787,6 +1793,133 @@ output$progress_plot <- renderPlot({
               color = "black",
               size = 5)
 })
+
+
+
+
+
+  ###################################################
+  ###################### MOST WANTED ################
+  ###################################################
+
+  ### ---------- GENEVA ----------
+  data_geneva <- reactive({
+    list_geneve$species <- paste(list_geneve$genre, list_geneve$espece)
+    
+    result <- cover_family_garden_full %>% filter(code_garden == "ge")
+    species_list <- cover_species_garden_full %>%
+      filter(family %in% unique(result$family)) %>%
+      pull(species) %>% unique()
+    
+    result_genus <- cover_genus_garden_full %>% filter(code_garden == "ge")
+    genus_list <- gen_tax %>%
+      filter(genus %in% unique(result_genus$genus)) %>%
+      pull(species) %>% unique()
+    
+    list_family <- data.frame(species = species_list, target = "family")
+    list_genus  <- data.frame(species = genus_list, target = "genus")
+    merged <- unique(rbind(list_family, list_genus))
+    
+    final <- merge(list_geneve, merged, by = "species", all = FALSE)
+    final <- final %>%
+      group_by(Code.ipen) %>%
+      filter(!(n() > 1 & target == "genus")) %>%
+      ungroup()
+    
+    return(final)
+  })
+
+  output$table_mw_geneva <- DT::renderDataTable({
+    DT::datatable(data_geneva(), options = list(pageLength = 10))
+  })
+
+  output$download_table_mw_Geneva <- downloadHandler(
+    filename = function() {
+      "most_wanted_geneva.csv"
+    },
+    content = function(file) {
+      write.csv(data_geneva(), file, row.names = FALSE)
+    }
+  )
+
+  ### ---------- PRAGUE ----------
+  data_prague <- reactive({
+    result <- cover_family_garden_full %>% filter(code_garden == "pr")
+    species_list <- cover_species_garden_full %>%
+      filter(family %in% unique(result$family)) %>%
+      pull(species) %>% unique()
+    
+    result_genus <- cover_genus_garden_full %>% filter(code_garden == "pr")
+    genus_list <- pra_tax %>%
+      filter(genus %in% unique(result_genus$genus)) %>%
+      pull(species) %>% unique()
+    
+    list_family <- data.frame(species = species_list, target = "family")
+    list_genus  <- data.frame(species = genus_list, target = "genus")
+    merged <- unique(rbind(list_family, list_genus))
+    merged <- merged[!is.na(merged$species), ]
+    
+    return(merged)
+  })
+
+  output$table_mw_prague <- DT::renderDataTable({
+    DT::datatable(data_prague(), options = list(pageLength = 10))
+  })
+
+  output$download_table_mw_Prague <- downloadHandler(
+    filename = function() {
+      "most_wanted_prague.csv"
+    },
+    content = function(file) {
+      write.csv(data_prague(), file, row.names = FALSE)
+    }
+  )
+
+  ### ---------- LONDON ----------
+  data_london <- reactive({
+    result <- cover_family_garden_full %>% filter(code_garden == "lo")
+    species_list <- cover_species_garden_full %>%
+      filter(family %in% unique(result$family)) %>%
+      pull(species) %>% unique()
+    
+    result_genus <- cover_genus_garden_full %>% filter(code_garden == "lo")
+    genus_list <- lon_tax %>%
+      filter(genus %in% unique(result_genus$genus)) %>%
+      pull(species) %>% unique()
+    
+    list_family <- data.frame(species = species_list, target = "family")
+    list_genus  <- data.frame(species = genus_list, target = "genus")
+    merged <- unique(rbind(list_family, list_genus))
+    
+    final <- merge(
+      list_london,
+      merged,
+      by.x = "Accepted.Name",
+      by.y = "species",
+      all = FALSE
+    ) %>%
+      group_by(Catalogue.Number) %>%
+      filter(!(n() > 1 & target == "genus")) %>%
+      ungroup()
+    
+    return(final)
+  })
+
+  output$table_mw_london <- DT::renderDataTable({
+    DT::datatable(data_london(), options = list(pageLength = 10))
+  })
+
+  output$download_table_mw_London <- downloadHandler(
+    filename = function() {
+      "most_wanted_london.csv"
+    },
+    content = function(file) {
+      write.csv(data_london(), file, row.names = FALSE)
+    }
+  )
+
+
+
 
 }
 
