@@ -86,7 +86,7 @@ fri_tax <- list_fri %>%
 ##########################################
 ### LAUSANNE
 
-list_lau <- read.csv(file.path(folder, "list_lausanne.csv"), sep =";")
+list_lau <- read.csv(file.path(folder, "list_lausanne.csv"), sep =",")
 
 # 2. Nettoyer les noms de taxons
 lau_inv_subset <- list_lau %>%
@@ -170,16 +170,16 @@ pra_tax <- data.frame(
 ##########################################
 ### LONDON KEW 
 
-list_kew1 <- read.csv(file.path(folder, "Kew_TropicalNursery_list.csv"), sep =";")
-list_kew2 <- read.csv(file.path(folder, "Kew_TemperateHouse_list.csv"), sep =";")
+list_kew_TH <- read.csv(file.path(folder, "kew_temperate_house_list.csv"), sep =";")
+list_kew_PoW <- read.csv(file.path(folder, "kew_PoW_list.csv"), sep =";")
+list_kew_RG <- read.csv(file.path(folder, "kew_rock_garden_list.csv"), sep =",")
 
-
-list_kew <- rbind(list_kew1,list_kew2)
+list_kew_all <- bind_rows(list_kew_TH, list_kew_PoW, list_kew_RG)
 
 
 lon_tax <- data.frame(
-  species = list_kew$TaxonomicName,
-  genus = list_kew$Genus,               
-  family = list_kew$Family,
+  species = list_kew_all$TaxonomicName,
+  genus = list_kew_all$Genus,               
+  family = list_kew_all$Family,
   garden = "lo"
 )

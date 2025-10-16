@@ -60,6 +60,7 @@ sidebarMenu(
   menuItem("Phylogenetic", icon = icon("network-wired"),
            menuSubItem("Garden Tree", tabName = "garden_tree", icon = icon("tree")),
            menuSubItem("Family Tree", tabName = "family_tree", icon = icon("sitemap")),
+           menuSubItem("Genus Tree", tabName = "genus_tree", icon = icon("sitemap")),
            menuSubItem("Taxonomic Coverage", tabName = "plot_cover", icon = icon("project-diagram"))
   ),
   
@@ -273,6 +274,56 @@ If the tree does not display any selected genera, it means that the number reque
   )
 ),
 
+
+tabItem(tabName = "genus_tree",
+  tags$h1("Genus Tree"),
+  helpText(tags$strong("This section presents the Genus Tree plot.
+For the selected genus, you will see the species present in the selected garden. You can choose the number of species to include, and the model will suggest which species to prioritize in order to best cover the taxonomic diversity of the genus.
+Please note that the tree might display more blue branches than the number of species you selected. This occurs because the model cannot always reach the exact number requested and instead aims to provide the closest match to maximize coverage.
+If the tree does not display any selected species, it means that the number requested is too high relative to what is available. In that case, please try selecting all species.")),
+
+  fluidRow(
+    box(
+      width = 12, status = "primary", solidHeader = TRUE,
+      selectInput(
+        "genus", "Genus to Test",
+        choices = sort(unique(iconv(cover_species_garden_full$genus, from = "", to = "UTF-8"))),
+        selected = ""
+      ),
+      sliderInput(
+        "species_select",
+        "Number of species to select",
+        min = 1, max = 30, value = 5
+      ),
+      actionButton(
+        "actiongenus", "Apply Genus Filter",
+        icon = icon("play"),
+        style = "color: #fff; background-color: #008d4c; border: none;"
+      ),
+      textOutput("textspecies"),
+      DT::dataTableOutput("onlyspecies")
+    )
+  ),
+
+  fluidRow(
+    column(
+      width = 12,
+      div(
+        style = "text-align: right; margin-bottom: 10px;",
+        downloadButton("downloadGenusPlot", "Download Genus Tree Plot", class = "btn btn-primary"),
+        downloadButton("downloadTable", "Download Priority Table", class = "btn btn-primary")
+      )
+    )
+  ),
+
+  fluidRow(
+    plotOutput("GenusPlot", height = "800px"),
+    DT::dataTableOutput("mytable")
+  )
+),
+
+
+
 tabItem(tabName = "plot_cover",
   tags$h1("Taxonomic Coverage"),
   helpText(tags$strong("These graphs illustrate the taxonomic coverage at the family, genus, and species levels within the selected gardens, providing a detailed view of biodiversity representation.")),
@@ -395,6 +446,7 @@ tabItem(tabName = "species_distribution",
 
 tabItem(tabName = "data_frame",
   tags$h1("Data Frames"),
+  
   fluidRow(
     box(
       width = 12, status = "primary", solidHeader = TRUE,
@@ -405,6 +457,7 @@ tabItem(tabName = "data_frame",
       )
     )
   ),
+  
   fluidRow(
     box(
       width = 12, status = "primary", solidHeader = TRUE,
@@ -415,6 +468,7 @@ tabItem(tabName = "data_frame",
       )
     )
   ),
+  
   fluidRow(
     box(
       width = 12, status = "primary", solidHeader = TRUE,

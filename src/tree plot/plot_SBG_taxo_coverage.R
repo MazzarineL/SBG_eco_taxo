@@ -8,6 +8,9 @@ library(dplyr)
 library(ggtree)
 library(rotl)
 
+library(ggtreeExtra)
+
+library(ggnewscale) 
 
 ## TODO libraries are missing but found in the previous functions, fix
 ## TODO This will be improved
@@ -34,19 +37,24 @@ taxonomy_merge <- taxonomy_merge[!is.na(taxonomy_merge$ott_id.family),]
     species <- taxonomy_merge$name.family
     g <- split(species, taxonomy_merge$pres)
 
+if(is.null(my_tree$edge.length)) {
+  my_tree$edge.length <- rep(1, nrow(my_tree$edge))
+}
+my_tree$edge.length <- rep(1, nrow(my_tree$edge))
 
-tree_plot <- ggtree::ggtree(my_tree, layout = "circular") +
-geom_tiplab(size=1.5, offset=2)
+
+#plot of the tree
+tree_plot <- ggtree(my_tree, layout = "circular", branch.length = "none") +
+  geom_tiplab(size = 1.5, offset = 2)
+
 g1 <- groupOTU(tree_plot, g, "species") + 
   aes(color = species) +
-  theme(
-    legend.position = "none"
-  ) + 
-  new_scale_fill() +
+  theme(legend.position = "none") + 
+  new_scale_fill() +  
   geom_fruit(
-    data = cover_genus_garden_full,
+    data = taxonomy_family_full,
     geom = geom_tile,
-    mapping = aes(y = family, x = 3, fill = name.order),  
+    mapping = aes(y = name.family, x = 3, fill = name.order),  
     pwidth = 0.02,  
     offset = 0.02,  
     axis.params = list(
@@ -55,15 +63,16 @@ g1 <- groupOTU(tree_plot, g, "species") +
       hjust = 0
     ),
     grid.params = list()
-  ) + 
-  geom_tiplab(size = 0, color = NA) +  # Supprime les labels des tips s'ils causent des problèmes
-  geom_nodepoint(size = 0, color = NA) +  # Supprime les points aux noeuds de l'arbre
+  ) +
+  geom_tiplab(size = 0, color = NA) +
+  geom_nodepoint(size = 0, color = NA) +
   scale_color_manual(
     values = c("#9fc5e8", "#990000"),
     labels = c("Family not selected", "Family selected")
   )
 
 g1
+
 
   
 ggsave(filename = "D:/gitrepo/SBG_eco_taxo/inst/coverage family genus plot result/family_tree_BG.png", plot = g1)

@@ -643,6 +643,315 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
   })
 })
 
+
+#####################################
+######### PHYLO TREE GENUS ##########
+#####################################
+observeEvent(c(input$actiongenus, input$species_select), {
+  withProgress(message = 'Loading data...', value = 0, {
+    req(input$Garden != "")
+
+    genus_test <-  input$genus
+    output$onlyspecies <- renderDT({ NULL })
+    output$mytable <- renderDT({ NULL })
+    output$GenusPlot <- renderPlot({ NULL })
+    output$textspecies <- renderText({ NULL })
+    species_cover <- NULL
+    species_select <- input$species_select
+    input_code <- input$Garden
+    cover_species_garden <- cover_species_garden_full
+
+    # Nouvelle condition : si l’utilisateur demande plus d’espèces que disponibles
+    if (species_select > sum(cover_species_garden$pres == 0)) {
+      cover_species_garden$pres[cover_species_garden$pres == 0] <- 3
+      final_best_df <- cover_species_garden
+      goto_split <- TRUE
+    } else {
+      goto_split <- FALSE
+    }
+
+    if (!goto_split) {
+      incProgress(1/6, detail = "Preparing data...")
+
+      # Nettoyage des codes jardin
+      if (length(input_code) == 1) {
+        cover_species_garden$code_garden <- ifelse(
+          !grepl(paste(input_code, collapse = "|"), cover_species_garden$code_garden),
+          NA,
+          cover_species_garden$code_garden
+        )
+        cover_species_garden$code_garden[!is.na(cover_species_garden$code_garden)] <- paste(input_code, collapse = "_")
+      } else {
+        selected_values <- paste(input_code, collapse = "|")
+        cover_species_garden$code_garden[!grepl(selected_values, cover_species_garden$code_garden)] <- NA
+        entier <- c("fr", "ne", "la", "ge", "ch", "lo", "pr")
+        diff <- setdiff(entier, input_code)
+        cover_species_garden$code_garden <- gsub(paste(diff, collapse = "|"), "", cover_species_garden$code_garden)
+        cover_species_garden$code_garden <- gsub("_+", "_", cover_species_garden$code_garden)
+        cover_species_garden$code_garden <- gsub("^_|_$", "", cover_species_garden$code_garden)
+      }
+
+      incProgress(2/6, detail = "Filtering data...")
+      unique_species_count <- cover_species_garden_full %>%
+        filter(genus == genus_test) %>%
+        distinct(species) %>%
+        nrow()
+
+      if (unique_species_count == 1) {
+        output$onlyspecies <- DT::renderDT({
+          species_line <- subset(cover_species_garden_full, genus == input$genus)
+          species_line <- species_line %>%
+            dplyr::select(any_of(c("species", "genus", "family", "garden", "pres")))
+
+          datatable(
+            species_line,
+            options = list(pageLength = 10, scrollX = TRUE),
+            rownames = FALSE,
+            class = "stripe hover compact"
+          )
+        })
+
+        output$textspecies <- renderText({
+          "Tree not available: only one species in this genus."
+        })
+        output$GenusPlot <- renderPlot({})
+      } else {
+        cover_species_garden <- cover_species_garden %>%
+          filter(genus == genus_test)
+
+        cover_species_garden$species <- gsub("['’].*$", "", cover_species_garden$species)
+        cover_species_garden$species <- trimws(cover_species_garden$species)
+
+         ott_species<- unique(cover_species_garden$species) 
+
+          resolved_ott <- tnrs_match_names(ott_species)
+          resolved_ott <- resolved_ott[!is.na(resolved_ott$ott_id),]
+
+          cover_species_garden <- merge(
+          cover_species_garden,
+          resolved_ott,
+          by.x = "species",      
+          by.y = "unique_name",  
+          all.x = TRUE           
+          )
+
+        cover_species_garden$pres[is.na(cover_species_garden$pres)] <- 0
+        cover_species_garden <- cover_species_garden %>%
+          mutate(code_garden = na_if(code_garden, ""))
+
+        cover_species_garden <- cover_species_garden[!is.na(cover_species_garden$ott_id), ]
+        cover_species_garden$species <- gsub("^x ", "", cover_species_garden$species)
+        cover_species_garden$pres[is.na(cover_species_garden$code_garden)] <- 0
+
+        incProgress(3/6, detail = "Generating phylogenetic tree...")
+
+        valid_ott_ids <- unique(na.omit(cover_species_garden$ott_id))
+
+        if (length(valid_ott_ids) < 2) {
+          showNotification("Not enough valid ott_ids to generate a phylogenetic tree.", type = "error")
+          output$GenusPlot <- renderPlot({ NULL })
+          output$mytable <- renderDT({ NULL })
+          return(NULL)
+        }
+
+        max_ids <- 1000
+        if (length(valid_ott_ids) > max_ids) {
+          valid_ott_ids <- valid_ott_ids[1:max_ids]
+          showNotification(paste("Limitation to", max_ids, "ott_ids to avoid memory issues."), type = "warning")
+        }
+
+        tree <- rotl::tol_induced_subtree(ott_ids = valid_ott_ids)
+        tree_tip_label <- tree$tip.label
+
+        df_rangement <- data.frame(species = tree$tip.label)
+        df_rangement$species <- gsub("_", " ", df_rangement$species)           
+        df_rangement$species <- sub(" [^ ]+$", "", df_rangement$species)  
+        df_rangement <- merge(df_rangement, cover_species_garden, by = "species", all.x = TRUE, sort = FALSE)
+
+        best_diff <- Inf
+        best_dfs <- list()
+        before_values <- 0:10
+        after_values <- 0:10
+        step_values <- 1:5
+
+        for (before in before_values) {
+          for (after in after_values) {
+            for (step in step_values) {
+              df_temp <- df_rangement %>%
+                dplyr::mutate(
+                  reg_7day = slide_dbl(
+                    pres,
+                    .f = ~sum(.x, na.rm = TRUE),
+                    .before = before,
+                    .after = after,
+                    .step = step
+                  )
+                )
+
+              df_temp <- df_temp %>%
+                mutate(
+                  reg_7day = case_when(
+                    is.na(reg_7day) & pres == 0 ~ 1,
+                    is.na(reg_7day) & pres == 1 ~ 2,
+                    TRUE ~ reg_7day
+                  ),
+                  pres = if_else(reg_7day == 0 & pres == 0, 3, pres)
+                )
+
+              count_3 <- sum(df_temp$pres == 3, na.rm = TRUE)
+              if (is.na(count_3) || count_3 > species_select) next
+
+              diff <- abs(count_3 - species_select)
+              if (diff == 0) best_dfs[[length(best_dfs) + 1]] <- df_temp
+              if (diff < best_diff) {
+                best_diff <- diff
+                best_df <- df_temp
+              }
+            }
+          }
+        }
+
+        calculate_distance <- function(df) {
+          indices <- which(df$pres == 3)
+          if (length(indices) < 2) return(0)
+          return(min(diff(indices)))
+        }
+
+        max_distance <- -Inf
+        final_best_df <- NULL
+
+        for (df in best_dfs) {
+          distance <- calculate_distance(df)
+          if (distance > max_distance) {
+            max_distance <- distance
+            final_best_df <- df
+          }
+        }
+
+        if (length(best_dfs) == 0) {
+          min_diff <- Inf
+          for (before in before_values) {
+            for (after in after_values) {
+              for (step in step_values) {
+                df_temp <- df_rangement %>%
+                  dplyr::mutate(
+                    reg_7day = slide_dbl(
+                      pres,
+                      .f = ~sum(.x, na.rm = TRUE),
+                      .before = before,
+                      .after = after,
+                      .step = step
+                    )
+                  )
+
+                df_temp <- df_temp %>%
+                  mutate(
+                    reg_7day = case_when(
+                      is.na(reg_7day) & pres == 0 ~ 1,
+                      is.na(reg_7day) & pres == 1 ~ 2,
+                      TRUE ~ reg_7day
+                    ),
+                    pres = if_else(reg_7day == 0 & pres == 0, 3, pres)
+                  )
+
+                count_3 <- sum(df_temp$pres == 3)
+                if (is.na(count_3) || count_3 > species_select) next
+
+                diff <- abs(count_3 - species_select)
+                if (diff < min_diff) {
+                  min_diff <- diff
+                  best_df <- df_temp
+                }
+              }
+            }
+          }
+          final_best_df <- df_temp
+        }
+
+        incProgress(4/6, detail = "Preparing the table...")
+
+        output$mytable <- DT::renderDT({
+          df_rangement_priority <- final_best_df %>% filter(pres == 3) %>% select(species)
+
+          length_to_pad <- (3 - length(df_rangement_priority$species) %% 3) %% 3
+          padded_species <- c(df_rangement_priority$species, rep(NA, length_to_pad))
+
+          matrix_species <- matrix(padded_species, ncol = 3, byrow = TRUE)
+          df_table <- as.data.frame(matrix_species)
+
+          datatable(
+            df_table,
+            options = list(pageLength = 10, scrollX = TRUE),
+            rownames = FALSE,
+            colnames = c("Species 1", "Species 2", "Species 3"),
+            class = "stripe hover compact"
+          )
+        })
+
+        output$downloadTable <- downloadHandler(
+          filename = function() {
+            paste("Priority_", genus_test, ".csv", sep = "")
+          },
+          content = function(file) {
+            df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% select(species)
+            write.csv(df_rangement_priority, file, row.names = FALSE)
+          }
+        )
+
+        incProgress(5/6, detail = "Rendering genus tree...")
+
+        output$GenusPlot <- renderPlot({
+          isolate({
+            tree_genus <- ggtree::ggtree(tree, layout = "circular") +
+              theme(legend.position = "right", legend.key.size = unit(3, "lines")) +
+              geom_tiplab(size = 3, offset = 0.5)
+
+# 1. Créer une table de correspondance entre les noms simples et les labels complets
+            match_table <- data.frame(
+                 species_clean = tolower(gsub("_ott[0-9]+", "", gsub("_", " ", tree_tip_label))),
+                 species_label = tree_tip_label
+                  )
+            match_table$species_clean <- sub(" ott[0-9]+", "", match_table$species_clean)
+
+            final_best_df$species <- match_table$species_label[
+              match(tolower(final_best_df$search_string), match_table$species_clean)
+            ]
+
+            species_cover <- split(final_best_df$species, final_best_df$pres)
+
+            tree_genus <- ggtree::groupOTU(tree_genus, species_cover, "species") +
+              aes(color = species) +
+              scale_color_manual(
+                name = "Species",
+                values = c("0" = "orange", "1" = "darkgreen", "3" = "blue"),
+                labels = c("Not available", "Available", "Priority"),
+                breaks = c("0", "1", "3")
+              ) +
+              labs(title = paste("Tree of genus", genus_test)) +
+              theme(
+                legend.title = element_text(size = 20),
+                legend.text = element_text(size = 15)
+              )
+
+            print(tree_genus)
+
+            output$downloadGenusPlot <- downloadHandler(
+              filename = function() {
+                paste0("Tree_plot_", genus_test, ".pdf")
+              },
+              content = function(file) {
+                ggsave(filename = file, plot = tree_genus, device = "pdf", width = 40, height = 40, units = "cm")
+              }
+            )
+          })
+        })
+
+        incProgress(6/6, detail = "Finalizing...")
+      }
+    }
+  })
+})
+
 #####################################
 #########BARPLOT COVER ##############
 #####################################
@@ -1346,6 +1655,9 @@ output$downloaddistrib <- downloadHandler(
 cover_species <- cover_species_garden_full
 all_species <- all_species_taxo
 
+cover_species <- as.data.frame(lapply(cover_species, function(x) iconv(x, from = "", to = "UTF-8", sub = "")))
+all_species <- as.data.frame(lapply(all_species, function(x) iconv(x, from = "", to = "UTF-8", sub = "")))
+
 # Remplacer les valeurs dans garden en utilisant le vecteur de correspondances
 cover_species <- cover_species %>%
   dplyr::mutate(garden = replacement_mapping[garden])
@@ -1457,6 +1769,7 @@ output$downloadTablespecies <- downloadHandler(
       showNotification(paste("Erreur lors de la récupération :", status_code(res)), type = "error")
       return(NULL)
     }
+
   })
   list_fr <- reactive({
     read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_fribourg.csv"), sep = ",") %>%
@@ -1506,7 +1819,12 @@ list_ch <- reactive({
    
 })
 
-
+list_lo <- reactive({
+  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_london.csv"), sep = ";") %>%
+    select(Famille, Genre_nouveau, Sps_nouveau) %>%
+    rename(Familly = Famille, Genus = Genre_nouveau, Species = Sps_nouveau) 
+   
+})
 
 
 
@@ -1668,7 +1986,7 @@ jbc_sf <- reactive({
   
   datatable(df, options = list(pageLength = 10, scrollX = TRUE))
 })
-  
+
 output$table_jbn <- renderDT({
   df <- jbn_merged()
   
@@ -1695,7 +2013,39 @@ output$table_jbc <- renderDT({
   datatable(df, options = list(pageLength = 10, scrollX = TRUE))
 })
   
+
+ # Handlers de téléchargement
+  output$download_jbuf <- downloadHandler(
+    filename = function() {
+      paste("jbuf_data_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      df <- jbuf_merged() # Remplacez par votre fonction pour obtenir les données
+      write.csv(df, file, row.names = FALSE)
+    }
+  )
   
+  output$download_jbn <- downloadHandler(
+    filename = function() {
+      paste("jbn_data_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      df <- jbn_merged() # Remplacez par votre fonction pour obtenir les données
+      write.csv(df, file, row.names = FALSE)
+    }
+  )
+  
+  output$download_jbc <- downloadHandler(
+    filename = function() {
+      paste("jbc_data_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      df <- jbc_merged() # Remplacez par votre fonction pour obtenir les données
+      write.csv(df, file, row.names = FALSE)
+    }
+  )
+
+
   # Render Leaflet maps
   output$leaflet_jbuf <- renderLeaflet({
     sf <- jbuf_sf()
