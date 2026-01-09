@@ -1754,7 +1754,10 @@ output$downloadTablespecies <- downloadHandler(
 
 
 
+df_filtre <- df[grepl("dbgi", df$sample_id, ignore.case = TRUE), ]
 
+# 2. Enregistrer le CSV
+write.csv(df_filtre, "df.csv", row.names = FALSE)
 
 
 
@@ -1827,12 +1830,22 @@ list_ch <- reactive({
 })
 
 list_lo <- reactive({
-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_london.csv"), sep = ";") %>%
+  list_kew_PoW <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_PoW_list.csv"), sep = ";")
+  list_kew_RG <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_rock_garden_list.csv"), sep = ",")
+  list_kew_TH <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_temperate_house_list.csv"), sep = ";")
+  
+  list_london <- bind_rows(list_kew_TH, list_kew_PoW, list_kew_RG)
+  
+  list_london <- list_london %>%
     select(Famille, Genre_nouveau, Sps_nouveau) %>%
-    rename(Familly = Famille, Genus = Genre_nouveau, Species = Sps_nouveau) 
-   
+    rename(
+      Family = Famille,
+      Genus = Genre_nouveau,
+      Species = Sps_nouveau
+    )
+  
+  return(list_london)
 })
-
 
 
 
@@ -1892,10 +1905,6 @@ list_lo <- reactive({
   })
   
 
-
-
-
-
   # jbc_merged
  jbc_merged <- reactive({
     req(data())
@@ -1928,6 +1937,36 @@ list_lo <- reactive({
   })
 
 
+  # jbk_merged
+ jbk_merged <- reactive({
+    req(data())
+    d <- data()
+    filtered <- d %>% filter(grepl("dbgi", sample_id, ignore.case = TRUE))
+    filtered$taxon_name <- ifelse(is.na(filtered$taxon_name), "", filtered$taxon_name)
+    filtered$sample_name <- ifelse(is.na(filtered$sample_name), "", filtered$sample_name)
+    filtered$taxon_name <- paste(filtered$taxon_name, filtered$sample_name)
+    filtered$taxon_name <- sapply(strsplit(trimws(filtered$taxon_name), "\\s+"), function(x) paste(head(x, 2), collapse = " "))
+    
+    jbc <- filtered[filtered$qfield_project == "jbc", ]
+    jbc <- jbc[, c("taxon_name", "sample_id", "x_coord", "y_coord", "qfield_project")]
+    jbc <- jbc[!is.na(jbc$taxon_name) & jbc$taxon_name != "", ]
+    
+    jbc$taxon_name <- tolower(jbc$taxon_name)
+    jbc$taxon_name <- gsub("[^a-z0-9 ]", "", jbc$taxon_name)
+    jbc$taxon_name <- trimws(jbc$taxon_name)
+    
+    ch <- list_ch()
+    ch$idTaxon <- paste(ch$Genus, ch$Species, sep = " ")
+    ch$idTaxon <- iconv(ch$idTaxon, from = "latin1", to = "UTF-8", sub = "")
+    ch$idTaxon <- tolower(ch$idTaxon)
+    ch$idTaxon <- tolower(ch$idTaxon)
+    ch$idTaxon <- gsub("[^a-z0-9 ]", "", ch$idTaxon)
+    ch$idTaxon <- trimws(ch$idTaxon)
+    
+    merged <- merge(jbc, ch, by.x = "taxon_name", by.y = "idTaxon", all.x = TRUE)
+    merged <- merged[!duplicated(merged$sample_id), ]
+    merged
+  })
 
 
 
