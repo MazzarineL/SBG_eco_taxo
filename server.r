@@ -188,16 +188,22 @@ observeEvent(input$action, {
 
     # Initialize variables
     taxonomy_merge <- cover_genus_garden_full
-    input_code <-input$Garden    
+    input_code <-input$Garden   
 
     # Update progress
     incProgress(1/5, detail = "Processing garden codes...")
     
     # If only one option is selected
     if (length(input_code) == 1) {
-      taxonomy_merge$code_garden[!is.na(taxonomy_merge$code_garden)] <- input_code
-      taxonomy_merge$code_garden[taxonomy_merge$pres == 0] <- NA
-    } else {
+
+  taxonomy_merge$code_garden <- ifelse(
+    taxonomy_merge$garden == input_code &
+      taxonomy_merge$pres != 0,
+    input_code,
+    NA
+  )
+
+}else {
       selected_values <- paste(input_code, collapse = "|")
       taxonomy_merge$code_garden[!grepl(selected_values, taxonomy_merge$code_garden)] <- NA
       entire_codes <- c("fr", "ne", "la", "ge","ch","lo","pr")
@@ -211,7 +217,7 @@ observeEvent(input$action, {
     
     taxonomy_merge$pres[is.na(taxonomy_merge$pres)] <- 0
     taxonomy_merge <- taxonomy_merge %>%
-      mutate(code_garden = na_if(code_garden, ""))
+      dplyr::mutate(code_garden = na_if(code_garden, ""))
     
     taxonomy_merge <- taxonomy_merge[!is.na(taxonomy_merge$ott_id.family), ]
     
@@ -339,7 +345,7 @@ output$textgenus <- renderText({ NULL })
           filter(family == family_test)
         cover_genus_garden$pres[is.na(cover_genus_garden$pres)] <- 0
         cover_genus_garden <- cover_genus_garden %>%
-          mutate(code_garden = na_if(code_garden, ""))
+           dplyr::mutate(code_garden = na_if(code_garden, ""))
         
         cover_genus_garden <- cover_genus_garden[!is.na(cover_genus_garden$ott_id.family), ]
         cover_genus_garden$genus <- gsub("^x ", "", cover_genus_garden$genus)
@@ -353,21 +359,48 @@ incProgress(3/6, detail = "Generating phylogenetic tree...")
 valid_ott_ids <- unique(na.omit(cover_genus_garden$uid))
 
 if (length(valid_ott_ids) < 2) {
-  showNotification("Pas assez d'ott_ids valides pour générer un arbre phylogénétique.", type = "error")
+  showNotification("Not enough valid ott_ids to generate a phylogenetic tree.", type = "error")
   output$FamilyPlot <- renderPlot({ NULL })  # Ne pas afficher de plot
   output$mytable <- renderDT({ NULL })       # Ne pas afficher de table
   return(NULL)                               # Arrêt ici
 }
 
-max_ids <- 1000  # limite mémoire (ajuster ou enlever si tu veux)
+max_ids <- 150  
 if (length(valid_ott_ids) > max_ids) {
-  valid_ott_ids <- valid_ott_ids[1:max_ids]
-  showNotification(paste("Limitation à", max_ids, "ott_ids pour éviter problème mémoire."), type = "warning")
+  valid_ott_ids <- sample(valid_ott_ids, max_ids)
+  showNotification(
+    paste("Tree reduced to", max_ids, "genera to avoid memory crash."),
+    type = "warning"
+  )
 }
 
-# Appel sécurisé à la fonction
-tree <- rotl::tol_induced_subtree(ott_ids = valid_ott_ids)
-tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tree$tip.label)
+
+# Si OK, construire l'arbre
+
+tree <- tryCatch({
+
+  rotl::tol_induced_subtree(ott_ids = valid_ott_ids)
+
+}, error = function(e) {
+
+  # capture TOUTES les erreurs rotl (dont std::vector)
+  showNotification(
+    "Tree too large to construct — tree skipped.",
+    type = "error",
+    duration = 6
+  )
+
+  return(NULL)
+})
+
+if (is.null(tree)) {
+
+  # on continue le script MAIS sans arbre
+  final_best_df <- cover_genus_garden
+
+  output$GenusPlot <- renderPlot({ NULL })
+
+} else {
 
         p <- ggtree(tree) + geom_tiplab()
         
@@ -400,7 +433,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
               
               # Gérer les NA dans reg_7day
               df_temp <- df_temp %>%
-                mutate(
+                 dplyr::mutate(
                   reg_7day = case_when(
                     is.na(reg_7day) & pres == 0 ~ 1,
                     is.na(reg_7day) & pres == 1 ~ 2,
@@ -468,7 +501,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
                 
                 # Gérer les NA dans reg_7day
                 df_temp <- df_temp %>%
-                  mutate(
+                   dplyr::mutate(
                     reg_7day = case_when(
                       is.na(reg_7day) & pres == 0 ~ 1,
                       is.na(reg_7day) & pres == 1 ~ 2,
@@ -501,7 +534,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
         incProgress(4/6, detail = "Preparing the table...")
         
         output$mytable <- DT::renderDT({
-  df_rangement_priority <- final_best_df %>% filter(pres == 3) %>% select(genus)
+  df_rangement_priority <- final_best_df %>% filter(pres == 3) %>% dplyr::select(genus)
   
   length_to_pad <- (3 - length(df_rangement_priority$genus) %% 3) %% 3
   padded_genus <- c(df_rangement_priority$genus, rep(NA, length_to_pad))
@@ -523,7 +556,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
             paste("Priority_", family_test, ".csv", sep = "")
           },
           content = function(file) {
-            df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% select(genus)
+            df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% dplyr::select(genus)
             write.csv(df_rangement_priority, file, row.names = FALSE)
           }
         )
@@ -579,7 +612,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
       incProgress(1/3, detail = "Preparing the table...")
       
       output$mytable <- gt::render_gt({
-        df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% select(genus)
+        df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% dplyr::select(genus)
         
         length_to_pad <- (3 - length(df_rangement_priority$genus) %% 3) %% 3
         padded_genus <- c(df_rangement_priority$genus, rep(NA, length_to_pad))
@@ -598,7 +631,7 @@ tree$tip.label <- gsub("^x_|\\(genus_in_kingdom_Archaeplastida\\)_|_.*", "", tre
           paste("Priority_", family_test, ".csv", sep = "")
         },
         content = function(file) {
-          df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% select(genus)
+          df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% dplyr::select(genus)
           write.csv(df_rangement_priority, file, row.names = FALSE)
         }
       )
@@ -744,7 +777,7 @@ observeEvent(c(input$actiongenus, input$species_select), {
 
         cover_species_garden$pres[is.na(cover_species_garden$pres)] <- 0
         cover_species_garden <- cover_species_garden %>%
-          mutate(code_garden = na_if(code_garden, ""))
+           dplyr::mutate(code_garden = na_if(code_garden, ""))
 
         cover_species_garden <- cover_species_garden[!is.na(cover_species_garden$ott_id), ]
         cover_species_garden$species <- gsub("^x ", "", cover_species_garden$species)
@@ -761,7 +794,7 @@ observeEvent(c(input$actiongenus, input$species_select), {
           return(NULL)
         }
 
-        max_ids <- 1000
+        max_ids <- 150
         if (length(valid_ott_ids) > max_ids) {
           valid_ott_ids <- valid_ott_ids[1:max_ids]
           showNotification(paste("Limitation to", max_ids, "ott_ids to avoid memory issues."), type = "warning")
@@ -796,7 +829,7 @@ observeEvent(c(input$actiongenus, input$species_select), {
                 )
 
               df_temp <- df_temp %>%
-                mutate(
+                 dplyr::mutate(
                   reg_7day = case_when(
                     is.na(reg_7day) & pres == 0 ~ 1,
                     is.na(reg_7day) & pres == 1 ~ 2,
@@ -852,7 +885,7 @@ observeEvent(c(input$actiongenus, input$species_select), {
                   )
 
                 df_temp <- df_temp %>%
-                  mutate(
+                   dplyr::mutate(
                     reg_7day = case_when(
                       is.na(reg_7day) & pres == 0 ~ 1,
                       is.na(reg_7day) & pres == 1 ~ 2,
@@ -878,7 +911,7 @@ observeEvent(c(input$actiongenus, input$species_select), {
         incProgress(4/6, detail = "Preparing the table...")
 
         output$mytable <- DT::renderDT({
-          df_rangement_priority <- final_best_df %>% filter(pres == 3) %>% select(species)
+          df_rangement_priority <- final_best_df %>% filter(pres == 3) %>% dplyr::select(species)
 
           length_to_pad <- (3 - length(df_rangement_priority$species) %% 3) %% 3
           padded_species <- c(df_rangement_priority$species, rep(NA, length_to_pad))
@@ -900,7 +933,7 @@ observeEvent(c(input$actiongenus, input$species_select), {
             paste("Priority_", genus_test, ".csv", sep = "")
           },
           content = function(file) {
-            df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% select(species)
+            df_rangement_priority <- df_rangement %>% filter(pres == 3) %>% dplyr::select(species)
             write.csv(df_rangement_priority, file, row.names = FALSE)
           }
         )
@@ -921,8 +954,8 @@ observeEvent(c(input$actiongenus, input$species_select), {
             match_table$species_clean <- sub(" ott[0-9]+", "", match_table$species_clean)
 
             final_best_df$species <- match_table$species_label[
-              match(tolower(final_best_df$search_string), match_table$species_clean)
-            ]
+  match(tolower(final_best_df$species), match_table$species_clean)
+]
 
             species_cover <- split(final_best_df$species, final_best_df$pres)
 
@@ -958,6 +991,18 @@ observeEvent(c(input$actiongenus, input$species_select), {
     }
   })
 })
+
+
+
+
+
+
+
+
+
+
+
+
 
 #####################################
 #########BARPLOT COVER ##############
@@ -1394,36 +1439,63 @@ whitfamilyKernel <- plotbiomes::whittaker_base_plot() +
 
 
 
-
-
 output$whitplotSelect <- renderPlotly({
+
   isolate({
+
+    cover_whit <- data_clim_reactive()
     family_test <- input$family
-    data_clim_sub <- subset(cover_whit, family == family_test)
 
-   data_clim_sub <- data_clim_sub %>%
-         filter(!is.na(temperature) & !is.na(precipitation) & 
-         is.finite(temperature) & is.finite(precipitation))
+    data_clim_sub <- cover_whit %>%
+      dplyr::filter(family == family_test) %>%
+      dplyr::filter(
+        !is.na(temperature),
+        !is.na(precipitation),
+        is.finite(temperature),
+        is.finite(precipitation)
+      )
 
-# Replace garden values using the replacement mapping
-        data_clim_sub <- data_clim_sub %>%
-          mutate(garden = replacement_mapping[garden])  # Ensure replacement_mapping is defined
+    req(nrow(data_clim_sub) > 0)
 
-        # Create the Plotly plot
-        plot <- ggplot(data_clim_sub, aes(x = temperature, y = precipitation, color = code_garden, text = paste("Species:", species))) + 
-          geom_point(size = 1, shape = 16, alpha = 0.8) +
-          labs(title = "Whittaker Plot") +
-          theme_minimal() +
-          theme(panel.background = element_rect(fill = "white", color = NA)) +
-          scale_color_manual(
-            name = "Garden",
-            values = color_values,  # Ensure color_values is defined
-            labels = labels,        # Ensure labels is defined
-            breaks = family_levels  # Ensure family_levels is defined
-          ) +
-          coord_cartesian(xlim = c(-15, 30), ylim = c(-5, 450))
+    data_clim_sub <- data_clim_sub %>%
+      dplyr::mutate(
+        garden = dplyr::recode(garden, !!!replacement_mapping),
+        code_garden = as.character(code_garden)
+      )
 
-        ggplotly(plot, tooltip = "text")
+    # ✅ FIX PLOTLY
+    valid_levels <- intersect(
+      family_levels,
+      unique(data_clim_sub$code_garden)
+    )
+
+    plot <- ggplot(
+      data_clim_sub,
+      aes(
+        x = temperature,
+        y = precipitation,
+        color = code_garden,
+        text = paste(
+          "Species:",
+          ifelse(is.na(species), "unknown", species)
+        )
+      )
+    ) +
+      geom_point(size = 1, alpha = 0.8) +
+      theme_minimal() +
+      scale_color_manual(
+        name = "Garden",
+        values = color_values[valid_levels],
+        labels = labels[valid_levels],
+        breaks = valid_levels,
+        drop = TRUE
+      ) +
+      coord_cartesian(
+        xlim = c(-15, 30),
+        ylim = c(-5, 450)
+      )
+
+    ggplotly(plot, tooltip = "text")
   })
 })
 
@@ -1431,6 +1503,10 @@ output$whitplotSelect <- renderPlotly({
 })
 
 
+}
+
+
+shinyApp(ui = ui, server = server)
 
 
 
@@ -1515,7 +1591,7 @@ observeEvent(input$GPS_genus, {
         data_inat <- especetest[selected_columns]
         data_inat <- data_inat %>%
           dplyr::filter(quality_grade == "research" & captive_cultivated == "false") %>%
-          select(longitude, latitude)
+          dplyr::select(longitude, latitude)
 
         # Recherche des données sur GBIF
         gbif_data <- rgbif::occ_data(scientificName = species_name, hasCoordinate = TRUE, limit = 100)
@@ -1681,7 +1757,7 @@ cover_species <- cover_species %>%
 
 cover_species <- cover_species %>%
   rename(pres = pres.x) %>%  
-  select(-pres.y)  
+  dplyr::select(-pres.y)  
 
    cover_species <- cover_species %>%
    dplyr::select(species, genus, family, garden, pres)
@@ -1754,14 +1830,6 @@ output$downloadTablespecies <- downloadHandler(
 
 
 
-df_filtre <- df[grepl("dbgi", df$sample_id, ignore.case = TRUE), ]
-
-# 2. Enregistrer le CSV
-write.csv(df_filtre, "df.csv", row.names = FALSE)
-
-
-
-
   ###################################################
   ###################### DBGI #######################
   ###################################################
@@ -1783,14 +1851,13 @@ write.csv(df_filtre, "df.csv", row.names = FALSE)
   })
   list_fr <- reactive({
     read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_fribourg.csv"), sep = ",") %>%
-      select(ipen, secteur, idTaxon, matched_name) %>%
-      mutate(idTaxon = sapply(strsplit(trimws(idTaxon), "\\s+"), function(x) paste(head(x, 2), collapse = " ")))
+      dplyr::select(ipen, secteur, idTaxon, matched_name) %>%
+       dplyr::mutate(idTaxon = sapply(strsplit(trimws(idTaxon), "\\s+"), function(x) paste(head(x, 2), collapse = " ")))
   })
   
   list_neu <- reactive({
     neu_cult2024 <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_neu_2024.csv"), sep = ";") 
     neu_cult2023 <-read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_neu_2023.csv"), sep = ";") 
-    colnames(neu_cult2023)
     neu_cult2023$years <- 2023
     neu_cult2024$years <- 2024
     
@@ -1809,8 +1876,8 @@ write.csv(df_filtre, "df.csv", row.names = FALSE)
    df$espece <- iconv(df$espece, from = "", to = "UTF-8", sub = "byte")
 
     df <- df %>%
-      select(code_ipen, famille, genre, espece, groupe, sous_groupe, years) %>%
-      mutate(
+      dplyr::select(code_ipen, famille, genre, espece, groupe, sous_groupe, years) %>%
+       dplyr::mutate(
         species = tolower(paste(genre, espece)),
         groupe = tolower(groupe) %>% gsub(" ", "_", .) %>% gsub("'", "", .) %>% stri_trans_general("Latin-ASCII"),
         sous_groupe = tolower(sous_groupe) %>% gsub(" ", "_", .) %>% gsub("'", "", .) %>% stri_trans_general("Latin-ASCII")
@@ -1824,20 +1891,20 @@ write.csv(df_filtre, "df.csv", row.names = FALSE)
   
 list_ch <- reactive({
   read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/list_champex.csv"), sep = ";") %>%
-    select(Famille, Genre_nouveau, Sps_nouveau) %>%
+    dplyr::select(Famille, Genre_nouveau, Sps_nouveau) %>%
     rename(Familly = Famille, Genus = Genre_nouveau, Species = Sps_nouveau) 
    
 })
 
 list_lo <- reactive({
-  list_kew_PoW <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_PoW_list.csv"), sep = ";")
-  list_kew_RG <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_rock_garden_list.csv"), sep = ",")
-  list_kew_TH <- read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_temperate_house_list.csv"), sep = ";")
-  
+list_kew_PoW <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_PoW_list.csv"), sep = ";")
+list_kew_RG <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_rock_garden_list.csv"), sep = ",")
+list_kew_TH <-  read.csv(curl::curl("https://raw.githubusercontent.com/MazzarineL/SBG_eco_taxo/refs/heads/main/data/botanical_garden_list/kew_temperate_house_list.csv"), sep = ";") 
+
   list_london <- bind_rows(list_kew_TH, list_kew_PoW, list_kew_RG)
   
   list_london <- list_london %>%
-    select(Famille, Genre_nouveau, Sps_nouveau) %>%
+    dplyr::select(Famille, Genre_nouveau, Sps_nouveau) %>%
     rename(
       Family = Famille,
       Genus = Genre_nouveau,
@@ -1936,37 +2003,6 @@ list_lo <- reactive({
     merged
   })
 
-
-  # jbk_merged
- jbk_merged <- reactive({
-    req(data())
-    d <- data()
-    filtered <- d %>% filter(grepl("dbgi", sample_id, ignore.case = TRUE))
-    filtered$taxon_name <- ifelse(is.na(filtered$taxon_name), "", filtered$taxon_name)
-    filtered$sample_name <- ifelse(is.na(filtered$sample_name), "", filtered$sample_name)
-    filtered$taxon_name <- paste(filtered$taxon_name, filtered$sample_name)
-    filtered$taxon_name <- sapply(strsplit(trimws(filtered$taxon_name), "\\s+"), function(x) paste(head(x, 2), collapse = " "))
-    
-    jbc <- filtered[filtered$qfield_project == "jbc", ]
-    jbc <- jbc[, c("taxon_name", "sample_id", "x_coord", "y_coord", "qfield_project")]
-    jbc <- jbc[!is.na(jbc$taxon_name) & jbc$taxon_name != "", ]
-    
-    jbc$taxon_name <- tolower(jbc$taxon_name)
-    jbc$taxon_name <- gsub("[^a-z0-9 ]", "", jbc$taxon_name)
-    jbc$taxon_name <- trimws(jbc$taxon_name)
-    
-    ch <- list_ch()
-    ch$idTaxon <- paste(ch$Genus, ch$Species, sep = " ")
-    ch$idTaxon <- iconv(ch$idTaxon, from = "latin1", to = "UTF-8", sub = "")
-    ch$idTaxon <- tolower(ch$idTaxon)
-    ch$idTaxon <- tolower(ch$idTaxon)
-    ch$idTaxon <- gsub("[^a-z0-9 ]", "", ch$idTaxon)
-    ch$idTaxon <- trimws(ch$idTaxon)
-    
-    merged <- merge(jbc, ch, by.x = "taxon_name", by.y = "idTaxon", all.x = TRUE)
-    merged <- merged[!duplicated(merged$sample_id), ]
-    merged
-  })
 
 
 
@@ -2165,7 +2201,7 @@ progress_data <- reactive({
   
   percent_df <- advance_long %>%
     tidyr::pivot_wider(names_from = status, values_from = n) %>%
-    mutate(percent_sampled = sampled / all * 100)
+     dplyr::mutate(percent_sampled = sampled / all * 100)
   
   return(percent_df)
 })
